@@ -1,8 +1,18 @@
 package com.shurik.historymoment
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import com.google.android.gms.location.*
+import com.shurik.historymoment.databinding.ActivityMapsBinding
+import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -11,86 +21,150 @@ import org.osmdroid.views.overlay.Marker
 
 class MapsActivity : AppCompatActivity() {
 
-        lateinit var map: MapView
-        //private lateinit var fusedLocationClient: FusedLocationProviderClient
+    lateinit var map: MapView
+    lateinit var mapController: IMapController
 
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
-            setContentView(R.layout.activity_maps)
+    private lateinit var binding: ActivityMapsBinding
+    private lateinit var currentLocation: Marker
+    private lateinit var centerLocationButton: Button
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-            map = findViewById(R.id.map)    // Прикрепляемся к объекту view
-            map.setTileSource(TileSourceFactory.MAPNIK)     // Это выбор тайла (что такое тайлы см. ниже)
-            map.setMultiTouchControls(true)     // включает поддержку мультитач-жестов на карте (пользователь может использовать несколько пальцев одновременно)
+    private val REQUEST_LOCATION_PERMISSIONS = 1
 
-            val mapController = map.controller     // Положение карты
-            mapController.setZoom(9.5)
-            val startPoint = GeoPoint(48.8583, 2.2944) // Центр карты
-            mapController.setCenter(startPoint)
+    // Для определения частоты обновления местоположения
+    private val locationRequest: LocationRequest = LocationRequest.create().apply {
+        interval = 10000
+        fastestInterval = 5000
+        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    }
 
-            // Так можно добавлять точки различных мест
-            val place1 = GeoPoint(48.8566, 2.3522) // Точка на карте (например, Эйфелева бащня)
-            addMarker(place1)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        binding = ActivityMapsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-            //... Пытался сделать отметку местоположения пользователя (пока не вышло)
-            /*fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-            fusedLocationClient.lastLocation.addOnSuccessListener {
-                if(it != null) {
-                    val startPoint = GeoPoint(it.latitude, it.longitude)
-                    mapController.setCenter(startPoint)
-                }
-            }*/
+        initializeMap()
+        initializeLocation()
+        additionalSettings()
+        getLastKnownLocation()
+    }
+
+    private fun initializeMap() {
+        map = findViewById(R.id.map)
+        map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setMultiTouchControls(true)
+        map.mapOrientation = 0.0f
+
+        mapController = map.controller
+        mapController.setZoom(20)
+
+        currentLocation = Marker(map)
+        currentLocation.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        currentLocation.icon = resources.getDrawable(R.drawable.ic_mark_person)
+        map.overlays.add(currentLocation)
+    }
+
+    private fun initializeLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                REQUEST_LOCATION_PERMISSIONS
+            )
+            return
         }
 
-        /*private val locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult?) {
-                locationResult ?: return
-
-                for (location in locationResult.locations){
-                    if (location != null) {
-                        val startPoint = GeoPoint(location.latitude, location.longitude)
-                        mapController.setCenter(startPoint)
-                    }
-                }
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        fusedLocationClient?.lastLocation?.addOnSuccessListener {
+            if (it != null) {
+                val startPoint = GeoPoint(it.latitude, it.longitude)
+                mapController.setCenter(startPoint)
             }
-        }*/
-
-    // Функция по добавлению новых точек
-    fun addMarker(point: GeoPoint) {
-            val marker = Marker(map)
-            marker.position = point
-            marker.title = "Historical Place"
-            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            marker.setOnMarkerClickListener { marker, mapView ->
-                // TODO: Show Wikipedia info here
-                true
-            }
-            map.overlays.add(marker)
-        }
-
-        override fun onResume() {
-            super.onResume()
-            map.onResume()
-        }
-
-        override fun onPause() {
-            super.onPause()
-            map.onPause()
         }
     }
 
-/*Тайлы - это небольшие изображения, которые составляют картографическую информацию, такую как карты.
-Они представляют собой квадратные фрагменты карты, которые загружаются и отображаются на экране вместе.
+    private fun getLastKnownLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+            if (location != null) {
+                val startPoint = GeoPoint(location.latitude, location.longitude)
+                mapController.setCenter(startPoint)
+                currentLocation.position = startPoint
+                map.overlays.add(currentLocation)
 
-В библиотеке Mapsforge для карты доступны различные источники тайлов. Некоторые из них включают:
-1. MAPNIK: Это стандартный и самый распространенный источник тайлов OpenStreetMap.
-Он предоставляет стандартные тайлы, содержащие подробную информацию о дорогах, зданиях, природных объектах и т.д.
-2. MAPNIK\_EUROPE: Это вариант источника тайлов MAPNIK, который ограничен только картами Европы.
-Он содержит те же типы информации, что и MAPNIK, но только для Европы.
-3. BASE: Это источник тайлов с базовой картографической информацией, такой как границы стран, основные города и реки.
+                map.invalidate()
+            }
+        }
+    }
 
-Выбор источника тайлов зависит от конкретного использования и потребностей.
-Различные источники могут предоставлять различную степень детализации,
-охватывать разные регионы и иметь разный стиль отображения.
-Можно выбрать источник тайлов, соответствующий требованиям к функциональности и эстетике карты.*/
+    private fun additionalSettings() {
 
+        centerLocationButton = binding.centerLocationButton
+        centerLocationButton.setOnClickListener {
+            getLastKnownLocation()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_LOCATION_PERMISSIONS) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getLastKnownLocation()
+            }
+        }
+    }
+
+    override fun onResume() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                REQUEST_LOCATION_PERMISSIONS
+            )
+            return
+        }
+
+        super.onResume()
+        getLastKnownLocation()
+        map.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        map.onPause()
+    }
+}
