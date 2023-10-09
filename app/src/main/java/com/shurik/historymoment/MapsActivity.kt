@@ -4,14 +4,19 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.*
+import com.shurik.historymoment.content.InfoModalData
+import com.shurik.historymoment.content.InfoModalDialog
 import com.shurik.historymoment.databinding.ActivityMapsBinding
+import com.shurik.historymoment.module_moscowapi.MoscowDataAPI
+import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -112,13 +117,15 @@ class MapsActivity : AppCompatActivity() {
                 currentLocation.position = startPoint
                 map.overlays.add(currentLocation)
 
+                // Отобразить места после успешного определения местоположения
+                displayLocations()
+
                 map.invalidate()
             }
         }
     }
 
     private fun additionalSettings() {
-
         centerLocationButton = binding.centerLocationButton
         centerLocationButton.setOnClickListener {
             getLastKnownLocation()
@@ -167,4 +174,47 @@ class MapsActivity : AppCompatActivity() {
         super.onPause()
         map.onPause()
     }
+
+    private fun displayLocations() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val moscowDataAPI = MoscowDataAPI()
+            val locations = moscowDataAPI.getObjectsByCoordinates(
+                currentLocation.position.latitude,
+                currentLocation.position.longitude
+            )
+
+            locations.forEach { location ->
+                withContext(Dispatchers.Main) {
+                    val coordinates =
+                        when (val geometryCoordinate = location.geometry.coordinates) {
+                            is GeometryCoordinate.Point -> geometryCoordinate.coordinates
+                            is GeometryCoordinate.MultiPoint -> geometryCoordinate.coordinates[0][0] // берем первые координаты, если они мульти-точечные
+                        }
+
+                    val newLocation = Marker(map)
+                    newLocation.position = GeoPoint(coordinates.longitude, coordinates.latitude)
+                    newLocation.title = location.properties.attributes.title
+                    newLocation.subDescription = location.properties.attributes.description.toString()
+                    newLocation.icon = resources.getDrawable(R.drawable.historical_places)
+                    map.overlays.add(newLocation)
+
+                    /*val infoModalData: InfoModalData = InfoModalData()
+                    infoModalData.title = location.properties.attributes.title
+                    infoModalData.coordinates.latitude = coordinates.longitude
+                    infoModalData.coordinates.longitude = coordinates.latitude
+                    infoModalData.description = location.properties.attributes.description.toString()
+
+                    newLocation.setOnMarkerClickListener { marker, mapView ->
+
+                        val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
+                        dialog.show()
+
+                        true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
+                    }*/
+                }
+            }
+
+        }
+    }
+
 }
