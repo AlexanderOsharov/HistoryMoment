@@ -1,4 +1,6 @@
 *.iml
+/app/src/main/java/com/shurik/historymoment/SecretFile.kt
+.idea/
 .gradle
 /local.properties
 /.idea/caches

@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
 
 data class Geometry(
-    @SerializedName("coordinates") val coordinates: GeometryCoordinate
+    @SerializedName("coordinates") val coordinates: GeometryCoordinate,
+    @SerializedName("type") val type: String
 )
 

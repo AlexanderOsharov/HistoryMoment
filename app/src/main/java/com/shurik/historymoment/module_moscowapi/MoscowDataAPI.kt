@@ -1,6 +1,7 @@
 package com.shurik.historymoment.module_moscowapi
 
 import com.google.gson.GsonBuilder
+import com.shurik.historymoment.SecretFile
 import com.shurik.historymoment.module_moscowapi.additional_module.Feature
 import com.shurik.historymoment.module_moscowapi.additional_module.FeaturesResponse
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.Coordinates
@@ -11,7 +12,7 @@ import okhttp3.Request
 import okhttp3.Response
 
 class MoscowDataAPI {
-    private val apiKey = ""
+    private val apiKey = SecretFile.ACCESS_TOKEN_DATAMOS
     private val baseUrl = "https://apidata.mos.ru/v1"
 
     private val okHttpClient = OkHttpClient()

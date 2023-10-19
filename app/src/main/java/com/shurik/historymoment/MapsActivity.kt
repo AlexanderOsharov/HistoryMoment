@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.view.View
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -12,6 +13,7 @@ import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
 import com.shurik.historymoment.databinding.ActivityMapsBinding
 import com.shurik.historymoment.module_moscowapi.MoscowDataAPI
+import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.Coordinates
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -26,8 +28,10 @@ import org.osmdroid.views.overlay.Marker
 
 class MapsActivity : AppCompatActivity() {
 
-    lateinit var map: MapView
-    lateinit var mapController: IMapController
+    companion object {
+        lateinit var map: MapView
+        lateinit var mapController: IMapController
+    }
 
     private lateinit var binding: ActivityMapsBinding
     private lateinit var currentLocation: Marker
@@ -56,7 +60,7 @@ class MapsActivity : AppCompatActivity() {
     }
 
     private fun initializeMap() {
-        map = findViewById(R.id.map)
+        map = binding.map
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
         map.mapOrientation = 0.0f
@@ -65,6 +69,7 @@ class MapsActivity : AppCompatActivity() {
         mapController.setZoom(20)
 
         currentLocation = Marker(map)
+        currentLocation.title = "Я"
         currentLocation.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         currentLocation.icon = resources.getDrawable(R.drawable.ic_mark_person)
         map.overlays.add(currentLocation)
@@ -183,26 +188,39 @@ class MapsActivity : AppCompatActivity() {
                 currentLocation.position.longitude
             )
 
-            locations.forEach { location ->
+            locations?.forEach { location ->
                 withContext(Dispatchers.Main) {
-                    val coordinates =
+                    val newLocation = Marker(map)
+                    val coord =
                         when (val geometryCoordinate = location.geometry.coordinates) {
                             is GeometryCoordinate.Point -> geometryCoordinate.coordinates
                             is GeometryCoordinate.MultiPoint -> geometryCoordinate.coordinates[0][0] // берем первые координаты, если они мульти-точечные
                         }
 
-                    val newLocation = Marker(map)
-                    newLocation.position = GeoPoint(coordinates.longitude, coordinates.latitude)
+                    when (location.geometry.coordinates) {
+                        is GeometryCoordinate.Point -> {
+                            newLocation.icon = resources.getDrawable(R.drawable.historical_places)
+                        }
+                        is GeometryCoordinate.MultiPoint -> {
+                            newLocation.icon = resources.getDrawable(R.drawable.walking_tour)
+                        } // берем первые координаты, если они мульти-точечные
+                    }
+
+                    newLocation.position = GeoPoint(coord.longitude, coord.latitude)
                     newLocation.title = location.properties.attributes.title
                     newLocation.subDescription = location.properties.attributes.description.toString()
                     newLocation.icon = resources.getDrawable(R.drawable.historical_places)
                     map.overlays.add(newLocation)
 
-                    /*val infoModalData: InfoModalData = InfoModalData()
-                    infoModalData.title = location.properties.attributes.title
-                    infoModalData.coordinates.latitude = coordinates.longitude
-                    infoModalData.coordinates.longitude = coordinates.latitude
-                    infoModalData.description = location.properties.attributes.description.toString()
+                    val infoModalData: InfoModalData = InfoModalData().apply {
+                        title = location.properties.attributes.title
+                        coordinates = when (val geometryCoordinate = location.geometry.coordinates) {
+                            is GeometryCoordinate.Point -> listOf(geometryCoordinate.coordinates) as MutableList<Coordinates>
+                            is GeometryCoordinate.MultiPoint -> geometryCoordinate.coordinates.flatten() as MutableList<Coordinates>
+                        }
+                        description = location.properties.attributes.description.toString()
+                        type = location.geometry.type
+                    }
 
                     newLocation.setOnMarkerClickListener { marker, mapView ->
 
@@ -210,7 +228,9 @@ class MapsActivity : AppCompatActivity() {
                         dialog.show()
 
                         true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
-                    }*/
+                    }
+
+
                 }
             }
 
