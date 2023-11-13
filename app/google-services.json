@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "413560877041",
+    "firebase_url": "https://historymomentdatabase-default-rtdb.firebaseio.com",
+    "project_id": "historymomentdatabase",
+    "storage_bucket": "historymomentdatabase.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:413560877041:android:b62929344385e0ff8c9e50",
+        "android_client_info": {
+          "package_name": "com.shurik.historymoment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCn4COUECx1QAGW-rvHntdDIjVxcpbMKY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
