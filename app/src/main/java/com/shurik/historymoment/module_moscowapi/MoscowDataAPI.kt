@@ -1,5 +1,6 @@
 package com.shurik.historymoment.module_moscowapi
 
+import android.util.Log
 import com.google.gson.GsonBuilder
 import com.shurik.historymoment.SecretFile
 import com.shurik.historymoment.module_moscowapi.additional_module.Feature
@@ -25,7 +26,7 @@ class MoscowDataAPI {
 
         val response: Response = okHttpClient.newCall(request).execute()
         val body = response.body?.string() ?: throw RuntimeException("No body found")
-
+        Log.e("MoscowDataAPI", body)
         val gson = GsonBuilder()
             .registerTypeAdapter(GeometryCoordinate::class.java, GeometryCoordinateDeserializer())
             .create()

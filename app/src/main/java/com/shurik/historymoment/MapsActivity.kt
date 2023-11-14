@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
@@ -11,14 +12,12 @@ import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.*
 import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
+import com.shurik.historymoment.content.html_parsing.SearchInfo
 import com.shurik.historymoment.databinding.ActivityMapsBinding
 import com.shurik.historymoment.module_moscowapi.MoscowDataAPI
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.Coordinates
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -181,6 +180,15 @@ class MapsActivity : AppCompatActivity() {
     }
 
     private fun displayLocations() {
+        runBlocking {
+            val searchInfo = "Бакалейно-мучной магазин В.Л. Жернакова"
+            //val searchInfo = "г. Москва, Романов переулок, дом 2/6, строение 8 акт государственной историко культурной экспертизы"
+            val info = SearchInfo.getInfoFromYandex(searchInfo)
+            Log.e("SearchInfo", "Text: ${info.text}")
+            Log.e("SearchInfo", "Images: ${info.images}")
+            Log.e("SearchInfo", "Videos: ${info.video}")
+        }
+
         GlobalScope.launch(Dispatchers.IO) {
             val moscowDataAPI = MoscowDataAPI()
             val locations = moscowDataAPI.getObjectsByCoordinates(
@@ -210,7 +218,10 @@ class MapsActivity : AppCompatActivity() {
                     newLocation.title = location.properties.attributes.title
                     newLocation.subDescription = location.properties.attributes.description.toString()
                     newLocation.icon = resources.getDrawable(R.drawable.historical_places)
-                    map.overlays.add(newLocation)
+                    Log.e("newLocation", "position: ${newLocation.position.toString()}")
+                    Log.e("newLocation", "title: ${newLocation.title}")
+                    Log.e("newLocation", "subDescription: ${newLocation.subDescription}")
+                    //map.overlays.add(newLocation)
 
                     val infoModalData: InfoModalData = InfoModalData().apply {
                         title = location.properties.attributes.title
@@ -222,14 +233,16 @@ class MapsActivity : AppCompatActivity() {
                         type = location.geometry.type
                     }
 
-                    newLocation.setOnMarkerClickListener { marker, mapView ->
+                    if (infoModalData.type == "MultiPoint") {
+                        newLocation.setOnMarkerClickListener { marker, mapView ->
 
-                        val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
-                        dialog.show()
+                            val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
+                            dialog.show()
 
-                        true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
+                            true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
+                        }
                     }
-
+                    map.overlays.add(newLocation)
 
                 }
             }

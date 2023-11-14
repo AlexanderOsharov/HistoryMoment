@@ -1,5 +1,6 @@
 package com.shurik.historymoment.module_moscowapi.additional_module.coordinates
 
+import android.util.Log
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -17,6 +18,7 @@ class GeometryCoordinateDeserializer : JsonDeserializer<GeometryCoordinate> {
                 pointList.add(arrayElement.asJsonArray
                     .map { item -> Coordinates(item.asJsonArray[0].asDouble, item.asJsonArray[1].asDouble) })
             }
+            Log.e("Coordinates: ", pointList.toString())
             GeometryCoordinate.MultiPoint(pointList)
         } else {
             // Мы имеем дело с одиночными координатами.
