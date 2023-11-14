@@ -9,11 +9,14 @@ import android.view.View
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Observer
 import com.google.android.gms.location.*
 import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
 import com.shurik.historymoment.content.html_parsing.SearchInfo
 import com.shurik.historymoment.databinding.ActivityMapsBinding
+import com.shurik.historymoment.db.DatabaseManager
+import com.shurik.historymoment.db.HistoryMomentViewModel
 import com.shurik.historymoment.module_moscowapi.MoscowDataAPI
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.Coordinates
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
@@ -26,7 +29,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 class MapsActivity : AppCompatActivity() {
-
+    private val dbManager = DatabaseManager();
     companion object {
         lateinit var map: MapView
         lateinit var mapController: IMapController
@@ -46,6 +49,7 @@ class MapsActivity : AppCompatActivity() {
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
+    //TODO(Для проверки работоспособности базы поместил код с viewmodel в MapsActivity, дальше используй по своему усмотрению)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
@@ -56,6 +60,18 @@ class MapsActivity : AppCompatActivity() {
         initializeLocation()
         additionalSettings()
         getLastKnownLocation()
+
+
+        // В val objects_list будут хранится все обьекты сразу, но в лог выведется только 100
+        // ==========================================================================
+        HistoryMomentViewModel.objects.observe(this) {
+            val objects_list = it
+            objects_list.forEach {
+                Log.e("OBJECT", it?.name + it.address?.fulladdress + it?.hash)
+            }
+        }
+        dbManager.getData()
+        // ==========================================================================
     }
 
     private fun initializeMap() {
