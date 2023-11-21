@@ -34,6 +34,7 @@ import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.ItemizedOverlayWithFocus
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
+import kotlin.coroutines.CoroutineContext
 
 class MapsActivity : AppCompatActivity() {
     private val dbManager = DatabaseManager();
@@ -147,17 +148,19 @@ class MapsActivity : AppCompatActivity() {
         }
 
 
-        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-            if (location != null) {
-                val startPoint = GeoPoint(location.latitude, location.longitude)
-                mapController.setCenter(startPoint)
-                currentLocation.position = startPoint
-                map.overlays.add(currentLocation)
+        while(true){
+            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                if (location != null) {
+                    val startPoint = GeoPoint(location.latitude, location.longitude)
+                    mapController.setCenter(startPoint)
+                    currentLocation.position = startPoint
+                    map.overlays.add(currentLocation)
 
-                // Отобразить места после успешного определения местоположения
-                displayLocations()
+                    // Отобразить места после успешного определения местоположения
+                    displayLocations()
 
-                map.invalidate()
+                    map.invalidate()
+                }
             }
         }
     }
