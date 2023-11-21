@@ -24,6 +24,9 @@ import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.G
 import kotlinx.coroutines.*
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -209,145 +212,75 @@ class MapsActivity : AppCompatActivity() {
         map.onPause()
     }
 
-    @SuppressLint("UseCompatLoadingForDrawables")
     private fun displayLocations() {
-        val newLocation = Marker(map)
-        newLocation.title = "Спасская башня"
-        newLocation.subDescription = "С другой стороны постоянный количественный рост и сфера нашей активности представляет собой интересный эксперимент проверки направлений прогрессивного развития. Идейные соображения высшего порядка, а также сложившаяся структура организации позволяет оценить значение позиций, занимаемых участниками в отношении поставленных задач. Товарищи! укрепление и развитие структуры обеспечивает широкому кругу (специалистов) участие в формировании форм развития.\n" +
-                "Значимость этих проблем настолько очевидна, что рамки и место обучения кадров обеспечивает широкому кругу (специалистов) участие в формировании форм развития. Задача организации, в особенности же новая модель организационной деятельности способствует подготовки и реализации системы обучения кадров, соответствует насущным потребностям. Задача организации, в особенности же реализация намеченных плановых заданий влечет за собой процесс внедрения и модернизации систем массового участия. Разнообразный и богатый опыт начало повседневной работы по формированию позиции позволяет оценить значение направлений прогрессивного развития. Равным образом рамки и место обучения кадров позволяет выполнять важные задания по разработке системы обучения кадров, соответствует насущным потребностям. Задача организации, в особенности же реализация намеченных плановых заданий позволяет выполнять важные задания по разработке системы обучения кадров, соответствует насущным потребностям.\n" +
-                "Значимость этих проблем настолько очевидна, что сложившаяся структура организации позволяет выполнять важные задания по разработке форм развития. Не следует, однако забывать, что начало повседневной работы по формированию позиции обеспечивает широкому кругу (специалистов) участие в формировании соответствующий условий активизации. Равным образом дальнейшее развитие различных форм деятельности требуют от нас анализа существенных финансовых и административных условий. Таким образом начало повседневной работы по формированию позиции обеспечивает широкому кругу (специалистов) участие в формировании систем массового участия. Идейные соображения высшего порядка, а также постоянное информационно-пропагандистское обеспечение нашей деятельности способствует подготовки и реализации соответствующий условий активизации. Не следует, однако забывать, что реализация намеченных плановых заданий в значительной степени обуславливает создание дальнейших направлений развития.\n" +
-                "Равным образом постоянное информационно-пропагандистское обеспечение нашей деятельности позволяет выполнять важные задания по разработке форм развития. Равным образом постоянное информационно-пропагандистское обеспечение нашей деятельности обеспечивает широкому кругу (специалистов) участие в формировании новых предложений.\n" +
-                "Товарищи! дальнейшее развитие различных форм деятельности играет важную роль в формировании существенных финансовых и административных условий. Равным образом рамки и место обучения кадров требуют от нас анализа направлений прогрессивного развития. Не следует, однако забывать, что реализация намеченных плановых заданий позволяет оценить значение позиций, занимаемых участниками в отношении поставленных задач. Разнообразный и богатый опыт начало повседневной работы по формированию позиции способствует подготовки и реализации соответствующий условий активизации"
-        newLocation.position = GeoPoint(55.752541, 37.621471)
-        newLocation.icon = resources.getDrawable(R.drawable.historical_places)
-        map.overlays.add(newLocation)
-        val infoModalData: InfoModalData = InfoModalData().apply {
-            title = newLocation.title
-            coordinates = listOf(Coordinates(55.752541, 37.621471)) as MutableList<Coordinates>
-            description = newLocation.subDescription
-            images = listOf("https://way2day.com/wp-content/uploads/2017/12/Bashnya-sblizi.jpg", "https://putidorogi-nn.ru/images/stories/evropa/rossiya/spasskaya-bashnya-moskovskogo-kremlya_4.jpg", "https://i.pinimg.com/originals/bc/27/05/bc270554c89c65798c9829ac4514c5f2.jpg") as MutableList<String>
-            type = "Point"
-        }
-        newLocation.setOnMarkerClickListener { marker, mapView ->
-            val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
-            dialog.show()
-
-            true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
-        }
-        val newLocation2 = Marker(map)
-        newLocation2.title = "Путешествие"
-        newLocation2.subDescription = "С другой стороны постоянный количественный рост и сфера нашей активности представляет собой интересный эксперимент проверки направлений прогрессивного развития. Идейные соображения высшего порядка, а также сложившаяся структура организации позволяет оценить значение позиций, занимаемых участниками в отношении поставленных задач. Товарищи! укрепление и развитие структуры обеспечивает широкому кругу (специалистов) участие в формировании форм развития.\n" +
-                "Значимость этих проблем настолько очевидна, что рамки и место обучения кадров обеспечивает широкому кругу (специалистов) участие в формировании форм развития. Задача организации, в особенности же новая модель организационной деятельности способствует подготовки и реализации системы обучения кадров, соответствует насущным потребностям. Задача организации, в особенности же реализация намеченных плановых заданий влечет за собой процесс внедрения и модернизации систем массового участия. Разнообразный и богатый опыт начало повседневной работы по формированию позиции позволяет оценить значение направлений прогрессивного развития. Равным образом рамки и место обучения кадров позволяет выполнять важные задания по разработке системы обучения кадров, соответствует насущным потребностям. Задача организации, в особенности же реализация намеченных плановых заданий позволяет выполнять важные задания по разработке системы обучения кадров, соответствует насущным потребностям.\n" +
-                "Значимость этих проблем настолько очевидна, что сложившаяся структура организации позволяет выполнять важные задания по разработке форм развития. Не следует, однако забывать, что начало повседневной работы по формированию позиции обеспечивает широкому кругу (специалистов) участие в формировании соответствующий условий активизации. Равным образом дальнейшее развитие различных форм деятельности требуют от нас анализа существенных финансовых и административных условий. Таким образом начало повседневной работы по формированию позиции обеспечивает широкому кругу (специалистов) участие в формировании систем массового участия. Идейные соображения высшего порядка, а также постоянное информационно-пропагандистское обеспечение нашей деятельности способствует подготовки и реализации соответствующий условий активизации. Не следует, однако забывать, что реализация намеченных плановых заданий в значительной степени обуславливает создание дальнейших направлений развития.\n" +
-                "Равным образом постоянное информационно-пропагандистское обеспечение нашей деятельности позволяет выполнять важные задания по разработке форм развития. Равным образом постоянное информационно-пропагандистское обеспечение нашей деятельности обеспечивает широкому кругу (специалистов) участие в формировании новых предложений.\n" +
-                "Товарищи! дальнейшее развитие различных форм деятельности играет важную роль в формировании существенных финансовых и административных условий. Равным образом рамки и место обучения кадров требуют от нас анализа направлений прогрессивного развития. Не следует, однако забывать, что реализация намеченных плановых заданий позволяет оценить значение позиций, занимаемых участниками в отношении поставленных задач. Разнообразный и богатый опыт начало повседневной работы по формированию позиции способствует подготовки и реализации соответствующий условий активизации"
-        newLocation2.position = GeoPoint(55.765574, 37.624489)
-        newLocation2.icon = resources.getDrawable(R.drawable.walking_tour)
-        map.overlays.add(newLocation2)
-        val infoModalData2: InfoModalData = InfoModalData().apply {
-            title = newLocation2.title
-            coordinates = listOf(Coordinates(55.765574, 37.624489), Coordinates(55.759339, 37.607170)) as MutableList<Coordinates>
-            description = newLocation2.subDescription
-            images = listOf("https://sportishka.com/uploads/posts/2022-04/1650707988_19-sportishka-com-p-krasivie-mesta-v-moskve-krasivo-foto-21.jpg", "https://www.brodyaga.ru/pages/photos/Russia/Moscow%20Russia%201295005232(www.brodyaga.com).jpg", "https://www.brodyaga.ru/pages/photos/Russia/Moscow%20Russia%201295005564(www.brodyaga.com).jpg") as MutableList<String>
-            type = "MultiPoint"
-        }
-        newLocation2.setOnMarkerClickListener { marker, mapView ->
-            val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
-            dialog.show()
-
-            true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
-        }
-
-        /*runBlocking {
-            val searchInfo = "Бакалейно-мучной магазин В.Л. Жернакова"
-            //val searchInfo = "г. Москва, Романов переулок, дом 2/6, строение 8 акт государственной историко культурной экспертизы"
-            val info = SearchInfo.getInfoFromYandex(searchInfo)
-            Log.e("SearchInfo", "Text: ${info.text}")
-            Log.e("SearchInfo", "Images: ${info.images}")
-            Log.e("SearchInfo", "Videos: ${info.video}")
-        }*/ //TODO: После добавления нормального окошка запустить этот блок (он ищет информацию об объектах в интернете)
-
-        /*HistoryMomentViewModel.objects.observe(this) {
-            val locations = it
-
-            locations?.forEach { location ->
-                val coord = location.address?.mapPosition?.coordinates
-
-                val newLocation = Marker(map)
-                newLocation.title = location.name
-                newLocation.subDescription = "Check"
-                //map.overlays.add(newLocation)
-
-                /*val infoModalData: InfoModalData = InfoModalData().apply {
-                    title = location.properties.attributes.title
-                    coordinates =
-                        when (val geometryCoordinate = location.geometry.coordinates) {
-                            is GeometryCoordinate.Point -> listOf(geometryCoordinate.coordinates) as MutableList<Coordinates>
-                            is GeometryCoordinate.MultiPoint -> geometryCoordinate.coordinates.flatten() as MutableList<Coordinates>
-                        }
-                    description = location.properties.attributes.description.toString()
-                    type = location.geometry.type
-                }*/
-                if (location.address?.mapPosition?.type == "Point") {
-                    newLocation.position = GeoPoint(coord?.get(1) ?: 0.0, coord?.get(0) ?: 0.0)
-                    newLocation.icon = resources.getDrawable(R.drawable.historical_places)
+        var previousZoomLevel = map.zoomLevelDouble
+        displayMarkersOnScreen()
+        map.addMapListener(object : MapListener {
+            override fun onZoom(e: ZoomEvent?): Boolean {
+                if (map.zoomLevelDouble > 17.0 && map.zoomLevelDouble > previousZoomLevel) {
+                    previousZoomLevel = map.zoomLevelDouble
+                    displayMarkersOnScreen()
+                } else {
+                    map.overlays.clear()
+                    map.overlays.add(currentLocation)
                 }
-                else {
-                    newLocation.position = GeoPoint(coord?.get(1) ?: 0.0, coord?.get(0) ?: 0.0)
-                    newLocation.icon = resources.getDrawable(R.drawable.walking_tour)
-                    /*newLocation.setOnMarkerClickListener { marker, mapView ->
-                        val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
-                        dialog.show()
-
-                        true // Возвращаем true, чтобы обозначить, что обработчик сработал успешно
-                    }*/
-                }
-                    map.overlays.add(newLocation)
-
-                }
-            }*/
-    }
-    /*private fun displayLocations() {
-        HistoryMomentViewModel.objects.observe(this) {
-            val locations = it
-
-            val clusterer = RadiiClusterer<MapMarker>(this) // Создаем кластеризатор
-            val overlayManager = map.overlayManager // Набиваем нашу коллекцию Items
-
-            val items: ArrayList<OverlayItem> = ArrayList()
-
-            locations?.forEach { location ->
-                val coord = location.address?.mapPosition?.coordinates
-
-                if(location.address?.mapPosition?.type != "Point") {
-                    return@forEach
-                }
-
-                val position = GeoPoint(coord?.get(1) ?: 0.0, coord?.get(0) ?: 0.0)
-                val title = location.name ?: "No title"
-                val item = OverlayItem(title, "Check", position)
-
-                items.add(item)
+                return true
             }
 
-            clusterer.setItems(items)
+            override fun onScroll(e: ScrollEvent?): Boolean {
+                displayMarkersOnScreen()
+                return true
+            }
+        })
+    }
 
-            val markersOverlay = ItemizedOverlayWithFocus<OverlayItem>(items,
-                object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
-                    override fun onItemSingleTapUp(index: Int, item: OverlayItem): Boolean {
-                        // Здесь у вас может быть код для обработки нажатия на маркер/кластер
-                        return true
-                    }
-                    override fun onItemLongPress(index: Int, item: OverlayItem): Boolean {
-                        // Здесь у вас может быть код для обработки долгого нажатия
-                        return true
-                    }
-                }, applicationContext)
+    private fun displayMarkersOnScreen() {
+        val mapBoundingBox = map.boundingBox
+        val visibleMarkers = mutableListOf<Marker>()
 
-            markersOverlay.setFocusItemsOnTap(true)
-            overlayManager.add(markersOverlay)
+        if (map.zoomLevelDouble > 17.0) {
+            HistoryMomentViewModel.objects.observe(this) { locations ->
+                locations?.forEach { location ->
+                    val coord = location.address?.mapPosition?.coordinates
+                    if (coord != null && coord.size == 2) {
+                        val locationPosition = GeoPoint(coord[1], coord[0])
+                        if (mapBoundingBox.contains(locationPosition)) {
+                            val newLocation = Marker(map)
+                            newLocation.title = location.name
+                            newLocation.subDescription = location.description
+                            newLocation.position = locationPosition
+                            newLocation.icon = if (location.address?.mapPosition?.type == "Point") {
+                                resources.getDrawable(R.drawable.historical_places)
+                            } else {
+                                resources.getDrawable(R.drawable.walking_tour)
+                            }
+                            newLocation.setOnMarkerClickListener { marker, mapView ->
+                                val infoModalData = InfoModalData().apply {
+                                    title = newLocation.title
+                                    coordinates = listOf(
+                                        Coordinates(
+                                            coord[1],
+                                            coord[0]
+                                        )
+                                    ) as MutableList<Coordinates>
+                                    description = newLocation.subDescription
+                                    images =
+                                        listOf(location.photo?.url.toString()) as MutableList<String>
+                                    type = location.address?.mapPosition?.type.toString()
+                                }
+                                val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
+                                dialog.show()
+                                true
+                            }
+                            visibleMarkers.add(newLocation)
+                        }
+                    }
+                }
+            }
         }
-    }*/
 
-
+        map.overlays.clear()
+        map.overlays.addAll(visibleMarkers)
+        map.overlays.add(currentLocation)
+    }
 }
