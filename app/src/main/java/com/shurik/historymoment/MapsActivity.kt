@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
 import android.view.View
@@ -67,6 +68,7 @@ class MapsActivity : AppCompatActivity() {
         initializeLocation()
         additionalSettings()
         getLastKnownLocation()
+        initLocationUpdates()
 
 
         // В val objects_list будут хранится все обьекты сразу, но в лог выведется только 100
@@ -133,6 +135,48 @@ class MapsActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun initLocationUpdates() {
+        val locationRequest = LocationRequest.create()?.apply {
+            interval = 1000 // Обновляем каждую секунду
+            fastestInterval = 5000
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult ?: return
+                for (location in locationResult.locations) {
+                    updateCurrentLocationMarker(location.latitude, location.longitude)
+                }
+            }
+        }
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        fusedLocationClient?.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+
+    private fun updateCurrentLocationMarker(latitude: Double, longitude: Double) {
+        val startPoint = GeoPoint(latitude, longitude)
+        if (currentLocation.position == null) {
+            currentLocation.position = startPoint
+            map.overlays.add(currentLocation)
+        } else {
+            currentLocation.position = startPoint
+        }
+        //mapController.setCenter(startPoint)
+        map.invalidate()
+    }
+
 
     private fun getLastKnownLocation() {
         if (ActivityCompat.checkSelfPermission(
