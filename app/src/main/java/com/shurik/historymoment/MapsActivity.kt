@@ -142,6 +142,8 @@ class MapsActivity : AppCompatActivity() {
         ) {
             return
         }
+
+
         fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
             if (location != null) {
                 val startPoint = GeoPoint(location.latitude, location.longitude)
