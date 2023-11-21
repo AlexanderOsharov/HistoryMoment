@@ -5,4 +5,4 @@ data class MapPosition(val type: String? = "", val coordinates: List<Double>? = 
 data class Address(val fulladdress: String? = "", val mapPosition: MapPosition? = null)
 data class Photo(val title: String? = "", val url: String? = "")
 
-class Object(val address: Address? = null, val name: String? = "", val hash: String? = "", val photo: Photo? = null)
+class Object(val address: Address? = null, val name: String? = "", val description: String? = "", val hash: String? = "", val photo: Photo? = null)
