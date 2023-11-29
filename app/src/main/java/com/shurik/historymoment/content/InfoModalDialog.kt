@@ -122,9 +122,18 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Dialo
         }
     }
 
-    fun bearingBetweenLocations(lat1: Double, long1: Double, lat2: Double, long2: Double): Float {
-        val brng = Math.atan2(Math.sin(long2 - long1) * Math.cos(lat2), Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(long2 - long1))
-        return Math.toDegrees((brng + 2 * Math.PI) % (2 * Math.PI)).toFloat()
+    companion object {
+        fun bearingBetweenLocations(
+            lat1: Double,
+            long1: Double,
+            lat2: Double,
+            long2: Double
+        ): Float {
+            val brng = Math.atan2(
+                Math.sin(long2 - long1) * Math.cos(lat2),
+                Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(long2 - long1)
+            )
+            return Math.toDegrees((brng + 2 * Math.PI) % (2 * Math.PI)).toFloat()
+        }
     }
-
 }

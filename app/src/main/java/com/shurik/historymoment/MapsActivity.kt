@@ -3,46 +3,32 @@ package com.shurik.historymoment
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.Icon
 import android.os.Bundle
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.speech.tts.TextToSpeech
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.NumberPicker
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
-import com.graphhopper.reader.osm.GraphHopperOSM
-import com.graphhopper.routing.util.EncodingManager
-import com.graphhopper.util.shapes.GHPoint
 import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
-import com.shurik.historymoment.content.html_parsing.SearchInfo
 import com.shurik.historymoment.databinding.ActivityMapsBinding
 import com.shurik.historymoment.db.DatabaseManager
 import com.shurik.historymoment.db.HistoryMomentViewModel
-import com.shurik.historymoment.module_moscowapi.MoscowDataAPI
 import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.Coordinates
-import com.shurik.historymoment.module_moscowapi.additional_module.coordinates.GeometryCoordinate
-import kotlinx.coroutines.*
-import okhttp3.Call
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
+import com.vividsolutions.jts.operation.overlay.MaximalEdgeRing
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
@@ -51,12 +37,10 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
-import org.osmdroid.views.overlay.*
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.pow
 
 class MapsActivity : AppCompatActivity() {
     private val dbManager = DatabaseManager();
@@ -68,6 +52,7 @@ class MapsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMapsBinding
     private lateinit var currentLocation: Marker
     private lateinit var routeButton: Button
+    private var isRouteButtonClicked: Boolean = false
     private lateinit var centerLocationButton: Button
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -244,9 +229,15 @@ class MapsActivity : AppCompatActivity() {
     private fun additionalSettings() {
         centerLocationButton = binding.centerLocationButton
         centerLocationButton.setOnClickListener {
-            getLastKnownLocation()
+            if (map.mapCenter == currentLocation.position){
+                mapController.setZoom(20)
+            }
+            else {
+                getLastKnownLocation()
+            }
         }
 
+        routeButton = binding.routeButton
         setupRouteButton()
     }
 
@@ -298,24 +289,148 @@ class MapsActivity : AppCompatActivity() {
         displayMarkersOnScreen()
         map.addMapListener(object : MapListener {
             override fun onZoom(e: ZoomEvent?): Boolean {
-                if (map.zoomLevelDouble > 17.0 && map.zoomLevelDouble > previousZoomLevel) {
-                    previousZoomLevel = map.zoomLevelDouble
-                    displayMarkersOnScreen()
-                } else {
-                    map.overlays.clear()
-                    map.overlays.add(currentLocation)
+                if (!isRouteButtonClicked) {
+                    if (map.zoomLevelDouble > 17.0 && map.zoomLevelDouble > previousZoomLevel) {
+                        previousZoomLevel = map.zoomLevelDouble
+                        displayMarkersOnScreen()
+                    } else {
+                        map.overlays.clear()
+                        map.overlays.add(currentLocation)
+                    }
                 }
                 return true
             }
 
             override fun onScroll(e: ScrollEvent?): Boolean {
-                displayMarkersOnScreen()
+                if (!isRouteButtonClicked) displayMarkersOnScreen()
                 return true
             }
         })
     }
 
     private fun displayMarkersOnScreen() {
+        if (map.zoomLevelDouble > 18.0) {
+            val visibleMarkers = ListPointsRoute()
+
+            map.overlays.clear()
+            map.overlays.addAll(visibleMarkers)
+            map.overlays.add(currentLocation)
+        }
+    }
+
+    private fun setupRouteButton(){
+        routeButton.setOnClickListener {
+            isRouteButtonClicked = !isRouteButtonClicked
+            if (isRouteButtonClicked) {
+                routeButton.text = "Вернуться"
+
+                val visibleMarkers = ListPointsRoute()
+                val numberPicker = NumberPicker(this)
+                numberPicker.minValue = 1
+                numberPicker.maxValue =
+                    visibleMarkers.size // кол-во элементов в листе visibleMarkers
+
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Выберите количество точек для маршрута")
+                    .setView(numberPicker)
+                    .setPositiveButton("OK") { _, _ ->
+                        val selectedNumPoints = numberPicker.value
+                        buildRoute(selectedNumPoints, visibleMarkers)
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+
+                dialog.show()
+            }
+            else {
+                routeButton.text = "построить маршрут"
+
+                if (map.zoomLevelDouble > 17.0) {
+                    displayMarkersOnScreen()
+                } else {
+                    map.overlays.clear()
+                    map.overlays.add(currentLocation)
+                }
+            }
+        }
+    }
+
+    private fun buildRoute(numPoints: Int, visibleMarkers: MutableList<Marker>) {
+        //val sortedMarkers = visibleMarkers.sortedBy { it.position.distanceToAsDouble(currentLocation.position) }
+        var temp = visibleMarkers[0]
+        var index = FindPoint(currentLocation, visibleMarkers)
+        visibleMarkers[0] = visibleMarkers[index]
+        visibleMarkers[index] = temp
+        Log.e("BuildRoute666666", "visibleMarkers.size = ${visibleMarkers.size}")
+        for (i in 1 until visibleMarkers.size) {
+            Log.e("BuildRoute666666", "i = $i")
+            temp = visibleMarkers[i]
+            index = FindPoint(visibleMarkers[i - 1], visibleMarkers.subList(i, visibleMarkers.size))
+            Log.e("BuildRoute666666", "index = $index")
+            visibleMarkers[i] = visibleMarkers[index + i]
+            visibleMarkers[index + i] = temp
+            Log.e("BuildRoute666666", "index + i + 1 = ${index + i + 1}")
+        }
+
+        // Строим маршрут
+        val polyline = Polyline()
+        polyline.width = 10f
+        polyline.color = Color.BLUE
+        polyline.addPoint(currentLocation.position) // текущее положение
+        polyline.addPoint(visibleMarkers[0].position) // положение первой видимой точки
+
+        map.overlayManager.add(polyline)
+
+        for (i in 1 until numPoints) {
+            val polyline1 = Polyline()
+            polyline1.width = 10f
+            polyline1.color = Color.BLUE
+            polyline1.addPoint(visibleMarkers[i - 1].position) // положение первой точки
+            polyline1.addPoint(visibleMarkers[i].position) // положение второй очки
+
+            map.overlayManager.add(polyline1)
+        }
+
+        map.invalidate() // обновление карты
+    }
+
+    @SuppressLint("SuspiciousIndentation")
+    private fun FindPoint(marker: Marker, listMarkers: MutableList<Marker>): Int {
+        var minIndex = 0
+
+        if (listMarkers.size > 0){
+            //var minDist = InfoModalDialog.bearingBetweenLocations(marker.position.latitude, marker.position.longitude, listMarkers[0].position.latitude, listMarkers[0].position.longitude)
+            var minDist = distance(marker, listMarkers[0])
+
+            for (i in 1 until listMarkers.size){
+                if (marker.position != listMarkers[i].position) {
+                    //val newDist = InfoModalDialog.bearingBetweenLocations(marker.position.latitude, marker.position.longitude, listMarkers[i].position.latitude, listMarkers[i].position.longitude)
+                    val newDist = distance(marker, listMarkers[i])
+                    if (newDist < minDist) {
+                        minDist = newDist
+                        minIndex = i
+                    }
+                }
+            }
+        }
+
+        return minIndex
+    }
+
+    fun distance(marker1: Marker, marker2: Marker): Double {
+        val latDistance = Math.toRadians(marker2.position.latitude - marker1.position.latitude)
+        val lonDistance = Math.toRadians(marker2.position.longitude - marker1.position.longitude)
+
+        val a = Math.sin(latDistance / 2).pow(2.0) +
+                Math.cos(Math.toRadians(marker1.position.latitude)) * Math.cos(Math.toRadians(marker2.position.latitude)) *
+                Math.sin(lonDistance / 2).pow(2.0)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+        val radius = 6371 // Earth's radius in kilometers
+        return radius * c
+    }
+
+    private fun ListPointsRoute(): MutableList<Marker> {
         val mapBoundingBox = map.boundingBox
         val visibleMarkers = mutableListOf<Marker>()
 
@@ -351,35 +466,6 @@ class MapsActivity : AppCompatActivity() {
                                 .error(placeholderIcon) // устанавливаем иконку по умолчанию в случае ошибки загрузки
                                 .into(target)
 
-                            val job = CoroutineScope(Dispatchers.IO).async {
-                                val searchInfo = location.name + location.address
-                                try {
-                                    val info = SearchInfo.getInfoFromYandex(searchInfo)
-                                    info.text
-                                } catch (e: Exception) {
-                                    Log.e("SearchInfo", "Error: ${e.message}")
-                                    "Failed to retrieve description"
-                                }
-                            }
-
-                            CoroutineScope(Dispatchers.Main).launch {
-                                try {
-                                    val result = withContext(Dispatchers.IO) { job.await() }
-                                    newLocation.subDescription = result
-                                } catch (e: Exception) {
-                                    Log.e("SearchInfo", "Error: ${e.message}")
-                                    newLocation.subDescription = "Failed to retrieve description"
-                                }
-                            }
-
-
-
-//                            // установить значение по умолчанию в 0.5, чтобы окно с информацией показывалось непосредственно под иконкой маркера
-//                            newLocation.setInfoWindowAnchor(0.5f, 0.5f)
-//
-//                            // показать окно с информацией
-//                            newLocation.showInfoWindow()
-
                             newLocation.setOnMarkerClickListener { marker, mapView ->
                                 val infoModalData = InfoModalData().apply {
                                     title = newLocation.title
@@ -403,11 +489,8 @@ class MapsActivity : AppCompatActivity() {
                     }
                 }
             }
-
-            map.overlays.clear()
-            map.overlays.addAll(visibleMarkers)
-            map.overlays.add(currentLocation)
         }
+        return visibleMarkers
     }
 
     private fun isMarkerWithinScreenBounds(markerPosition: GeoPoint): Boolean {
@@ -416,131 +499,6 @@ class MapsActivity : AppCompatActivity() {
         val screenWidth = map.width
         val screenHeight = map.height
         return markerPoint.x in 0..screenWidth && markerPoint.y in 0..screenHeight
-    }
-
-
-
-    private var isRoutePlanned = false
-    private var startPoint: GeoPoint? = null
-    private var endPoint: GeoPoint? = null
-    private var startMarker: Marker? = null
-    private var endMarker: Marker? = null
-    private var routePolyline: Polyline? = null
-
-    private fun setupRouteButton() {
-        routeButton = binding.routeButton
-        routeButton.setOnClickListener {
-            if (!isRoutePlanned) {
-                // Переключение в режим построения маршрута
-                isRoutePlanned = true
-                routeButton.text = "Отменить"
-                // Вешаем обработчик нажатия на карту для выбора точек
-                map.overlays.add(0, object : Overlay() {
-                    override fun onSingleTapConfirmed(
-                        e: MotionEvent?,
-                        mapView: MapView?
-                    ): Boolean {
-                        val projection = mapView!!.projection
-                        val tappedGeoPoint: GeoPoint = projection!!.fromPixels(
-                            e!!.x.toInt(),
-                            e.y.toInt()
-                        ) as GeoPoint
-                        if (startPoint == null) {
-                            startPoint = tappedGeoPoint
-                            startMarker = addStartEndMarker(tappedGeoPoint, "start")
-                        } else if (endPoint == null && tappedGeoPoint != startPoint) {
-                            endPoint = tappedGeoPoint
-                            endMarker = addStartEndMarker(tappedGeoPoint, "end")
-                            buildPedestrianRoute(startMarker!!, endMarker!!) { routePoints ->
-                                for (point in routePoints) {
-                                    val newLocation = Marker(map)
-                                    newLocation.position = GeoPoint(point.getLat(), point.getLon())
-                                    newLocation.icon =
-                                        resources.getDrawable(R.drawable.walking_direction)
-                                    newLocation.setOnMarkerClickListener { marker, mapView ->
-                                        true
-                                    }
-                                    map.overlays.add(newLocation)
-                                }
-                            }
-                            //routeButton.performClick() // Моделируем нажатие кнопки для переключения обратно
-                        }
-                        return true
-                    }
-
-                    // Другие методы интерфейса Overlay
-                })
-            } else {
-                // Отмена построения маршрута
-                isRoutePlanned = false
-                routeButton.text = "Построить маршрут"
-                map.overlays.remove(startMarker)
-                map.overlays.remove(endMarker)
-                if (routePolyline != null) {
-                    map.overlays.remove(routePolyline)
-                    routePolyline = null
-                }
-                startPoint = null
-                endPoint = null
-                startMarker = null
-                endMarker = null
-                map.invalidate()
-            }
-        }
-    }
-
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private fun addStartEndMarker(geoPoint: GeoPoint, type: String): Marker {
-        val marker = Marker(map)
-        marker.position = geoPoint
-        marker.icon = if (type == "start") {
-            resources.getDrawable(R.drawable.walking_tour)
-        } else {
-            resources.getDrawable(R.drawable.walking_finish)
-        }
-        map.overlays.add(marker)
-        map.invalidate()
-        return marker
-    }
-
-    private fun buildPedestrianRoute(start: Marker, end: Marker, onRouteBuilt: (List<GHPoint>) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val client = OkHttpClient()
-                val request = Request.Builder()
-                    .url("https://graphhopper.com/api/1/route?point=${start.getPosition().latitude},${start.getPosition().longitude}&point=${end.getPosition().latitude},${end.getPosition().longitude}&vehicle=foot&locale=en&key=${SecretFile.ACCESS_TOKEN_GRAPHHOPPER}")
-                    .build()
-
-                val response = client.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    // обработка ошибки, например, вывод сообщения об ошибке
-                    withContext(Dispatchers.Main) {
-                        onRouteBuilt(emptyList())
-                    }
-                } else {
-                    response.body?.use { responseBody ->
-                        val pathPoints = JSONObject(responseBody.string())
-                            .getJSONObject("paths").getJSONArray("points")
-
-                        val points = mutableListOf<GHPoint>()
-                        for (i in 0 until pathPoints.length()) {
-                            val point = pathPoints.getJSONArray(i)
-                            points.add(GHPoint(point.getDouble(0), point.getDouble(1)))
-                        }
-                        withContext(Dispatchers.Main) {
-                            onRouteBuilt(points)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // обработка других исключений, например, логирование
-                Log.e("GrapEr", e.toString())
-                withContext(Dispatchers.Main) {
-                    onRouteBuilt(emptyList())
-                }
-            }
-        }
     }
 
     private lateinit var tts: TextToSpeech
