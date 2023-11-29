@@ -10,12 +10,13 @@
 
     <Button
         android:id="@+id/center_location_button"
-        android:layout_width="80dp"
-        android:layout_height="60dp"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="36dp"
-        android:visibility="visible"
-        android:background="@drawable/target_icon" />
+        android:background="@drawable/ic_menu_compass"
+        android:includeFontPadding="false"
+        android:visibility="visible" />
 </RelativeLayout>
