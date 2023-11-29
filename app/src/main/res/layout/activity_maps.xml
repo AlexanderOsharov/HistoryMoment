@@ -18,4 +18,14 @@
         android:layout_marginBottom="36dp"
         android:visibility="visible"
         android:background="@drawable/target_icon" />
+
+    <Button
+        android:id="@+id/route_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="построить маршрут" />
 </RelativeLayout>
