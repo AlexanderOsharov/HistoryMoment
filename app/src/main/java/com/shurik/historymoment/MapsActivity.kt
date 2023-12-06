@@ -139,8 +139,8 @@ class MapsActivity : AppCompatActivity() {
 
     private fun initLocationUpdates() {
         val locationRequest = LocationRequest.create()?.apply {
-            interval = 1000 // Обновляем каждую секунду
-            fastestInterval = 5000
+            interval = 5000 // Обновляем каждую секунду
+            fastestInterval = 10
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
@@ -191,8 +191,6 @@ class MapsActivity : AppCompatActivity() {
             return
         }
 
-
-        while(true){
             fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
                 if (location != null) {
                     val startPoint = GeoPoint(location.latitude, location.longitude)
@@ -206,7 +204,6 @@ class MapsActivity : AppCompatActivity() {
                     map.invalidate()
                 }
             }
-        }
     }
 
     private fun additionalSettings() {
