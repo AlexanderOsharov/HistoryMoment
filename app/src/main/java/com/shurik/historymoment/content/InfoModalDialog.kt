@@ -2,138 +2,157 @@ package com.shurik.historymoment.content
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.speech.tts.TextToSpeech
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
+import android.view.*
 import android.widget.*
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.CompositePageTransformer
+import androidx.viewpager2.widget.MarginPageTransformer
+import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
-import com.shurik.historymoment.MapsActivity
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.shurik.historymoment.R
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.overlay.Marker
-import java.util.*
+import java.lang.Math.abs
 
-class InfoModalDialog(context: Context, private val data: InfoModalData) : Dialog(context, R.style.FullScreenDialogStyle) {
+class InfoModalDialog(context: Context, private val data: InfoModalData) : BottomSheetDialog(context, R.style.AppBottomSheetDialogTheme) {
+
+    private lateinit var imagesViewPager: ViewPager2
+    private lateinit var handler: Handler
+    private lateinit var imageList: ArrayList<Int>
+    private lateinit var adapter: ImagePagerAdapter
+
+    private lateinit var textToSpeechSystem: TextToSpeech
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.info_modal)
         window?.setGravity(Gravity.BOTTOM)
         window?.setWindowAnimations(R.style.DialogAnimation)
         //window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        window?.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
         setCanceledOnTouchOutside(true)
+
         setupData()
+
     }
 
-    @SuppressLint("SetTextI18n")
+    var isSpeechPlaying = false
+    var pausedPosition = 0 // переменная для сохранения позиции остановки озвучки
+
+
+    @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
     private fun setupData() {
-        val titleTextView: TextView = findViewById(R.id.titleTextView)
-        val coordinatesTextView: TextView = findViewById(R.id.coordinatesTextView)
-        val descriptionTextView: TextView = findViewById(R.id.descriptionTextView)
-        val imagesLinearLayout: LinearLayout = findViewById(R.id.imagesLinearLayout)
-        val parentRelative: RelativeLayout = findViewById(R.id.parentRelative)
+        val titleTextView: TextView? = findViewById(R.id.titleTextView)
+        val coordinatesTextView: TextView? = findViewById(R.id.coordinatesTextView)
+        val descriptionTextView: TextView? = findViewById(R.id.descriptionTextView)
+        imagesViewPager = findViewById(R.id.imagesViewPager)!!
+        val speechButton: Button? = findViewById(R.id.speechButton)
+        val parentRelative: RelativeLayout? = findViewById(R.id.parentRelative)
 
-        titleTextView.text = data.title
-        coordinatesTextView.text = "Coordinates: ${data.coordinates[0].latitude}, ${data.coordinates[0].longitude}"
-        descriptionTextView.text = data.description
+        titleTextView?.text = data.title
+        coordinatesTextView?.text = "Coordinates: ${data.coordinates[0].latitude}, ${data.coordinates[0].longitude}"
+        descriptionTextView?.text = data.description
 
-        if (data.images.isNotEmpty()) {
-            for (imageUrl in data.images) {
-                val imageView = ImageView(context)
-                imageView.layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                Glide.with(context).load(imageUrl).into(imageView)
-                imagesLinearLayout.addView(imageView)
+        adapter = ImagePagerAdapter(data.images, imagesViewPager)
+        imagesViewPager.adapter = adapter
+
+
+
+        // Создание уведомления
+        val notificationManager =
+            ContextCompat.getSystemService(context, NotificationManager::class.java) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Channel Name"
+            val descriptionText = "Channel Description"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel("channelId", name, importance).apply {
+                description = descriptionText
             }
+            notificationManager.createNotificationChannel(channel)
         }
 
-        // Добавляем новую кнопку "начать путешествие", если у нас есть несколько координат
-        if (data.coordinates.size > 1) {
-            /*val layoutParams = RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.WRAP_CONTENT,
-                RelativeLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutParams.addRule(RelativeLayout.BELOW, R.id.imagesScrollView)*/
-            val startJourneyButton = Button(context).apply {
-                text = "Start Journey"
-                setOnClickListener {
-                    for (i in 0 until data.coordinates.size - 1) {
-                        val directionMarker = Marker(MapsActivity.map)
-                        directionMarker.position = GeoPoint(
-                            data.coordinates[i].latitude,
-                            data.coordinates[i].longitude
-                        )
-                        // надо подобрать угол
-                        //val bitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.walking_direction)
-                        /*val directionMarkerIcon = resources.getDrawable(R.drawable.walking_direction, null)
-                        val bitmap = (directionMarkerIcon as BitmapDrawable).bitmap
-                        val matrix = Matrix()
-                        matrix.postRotate(
-                            bearingBetweenLocations(
-                                data.coordinates[i].latitude,
-                                data.coordinates[i].latitude,
-                                data.coordinates[i + 1].latitude,
-                                data.coordinates[i + 1].latitude
-                            )
-                        )
-                        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                        val drawable: Drawable = BitmapDrawable(resources, rotatedBitmap)
-                        directionMarker.icon = drawable*/
-                        directionMarker.icon = resources.getDrawable(R.drawable.walking_direction)
-                        MapsActivity.map.overlays.add(directionMarker)
-                    }
+        val notification = NotificationCompat.Builder(context, "channelId")
+            .setContentTitle("Озвучка активна")
+            .setContentText("Текст озвучивается")
+            .setSmallIcon(R.drawable.speaker_icon)
+            .build()
 
-                    /* Последний маркер является финишем, поэтому мы используем другую иконку */
-                    val finishMarker = Marker(MapsActivity.map)
-                    finishMarker.position = GeoPoint(
-                        data.coordinates.last().longitude,
-                        data.coordinates.last().longitude
-                    )
-                    finishMarker.icon = resources.getDrawable(R.drawable.walking_finish)
-                    MapsActivity.map.overlays.add(finishMarker)
+        // Запуск уведомления
+        notificationManager.notify(1, notification)
 
-                    // обновление карты
-                    MapsActivity.map.invalidate()
 
-                    // Закрываем окошко после начала "путешествия"
-                    dismiss()
+        speechButton?.setOnClickListener {
+            if (isSpeechPlaying) {
+                pausedPosition = textToSpeechSystem.stop() // остановка озвучки, если она уже играет
+                isSpeechPlaying = false
+            } else {
+                if (pausedPosition > 0) {
+                    val textToSay = data.description.substring(pausedPosition) // получение подстроки для продолжения озвучивания
+                    textToSpeechSystem.speak(textToSay, TextToSpeech.QUEUE_ADD, null, null) // воспроизведение с сохраненной позиции
                 }
-                setBackgroundResource(R.drawable.startjourneybutton_bg)
-                val layoutParams = RelativeLayout.LayoutParams(
-                    RelativeLayout.LayoutParams.WRAP_CONTENT,
-                    RelativeLayout.LayoutParams.WRAP_CONTENT
-                )
-                layoutParams.addRule(RelativeLayout.BELOW, R.id.imagesScrollView)
-                this.layoutParams = layoutParams
+                else {
+                    textToSpeechSystem = TextToSpeech(context) { status ->
+                        if (status == TextToSpeech.SUCCESS) {
+                            val textToSay = data.description
+                            textToSpeechSystem.speak(textToSay, TextToSpeech.QUEUE_ADD, null, null)
+                        }
+                    }
+                }
+                isSpeechPlaying = true
             }
-            //startJourneyButton.layoutParams = layoutParams
-            parentRelative.addView(startJourneyButton)
         }
     }
 
-    companion object {
-        fun bearingBetweenLocations(
-            lat1: Double,
-            long1: Double,
-            lat2: Double,
-            long2: Double
-        ): Float {
-            val brng = Math.atan2(
-                Math.sin(long2 - long1) * Math.cos(lat2),
-                Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(long2 - long1)
-            )
-            return Math.toDegrees((brng + 2 * Math.PI) % (2 * Math.PI)).toFloat()
+    class ImagePagerAdapter(private val images: List<String>, private val viewPager2: ViewPager2) : RecyclerView.Adapter<ImagePagerAdapter.ImageViewHolder>() {
+        private var currentPosition = 0
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.photos_places, parent, false)
+            return ImageViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
+            val imagePosition = position % images.size
+            Glide.with(holder.imageView)
+                .load(images[imagePosition])
+                .into(holder.imageView)
+        }
+
+        override fun getItemCount(): Int {
+            // Мы хотим, чтобы отображалось бесконечное количество изображений, поэтому возвращаем большее значение, чем размер списка изображений
+            return Int.MAX_VALUE
+        }
+
+        class ImageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val imageView: ImageView = itemView.findViewById(R.id.imageView)
+
+        }
+
+        init {
+            // Сделаем текущую позицию большим значением, так что позиция может быть отрицательной или слишком большой
+            val initialPosition = Int.MAX_VALUE / 2
+            viewPager2.post { viewPager2.setCurrentItem(initialPosition, false) }
+        }
+
+        fun setCurrentPosition(position: Int) {
+            currentPosition = position
+            notifyItemChanged(position)
         }
     }
+
+
+//    class ImageViewHolder(val imageView: ImageView) : RecyclerView.ViewHolder(imageView)
+
 }

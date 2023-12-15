@@ -1,58 +1,76 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="475dp"
-    android:layout_alignParentBottom="true"
+    android:layout_height="wrap_content"
     android:background="@drawable/dialog_bg"
     android:padding="16dp"
-    android:layout_marginLeft="0dp"
-    android:layout_marginRight="0dp"
     android:elevation="8dp"
     android:clipToPadding="false"
     android:clipChildren="false"
     android:id="@+id/parentRelative">
 
-
-    <ScrollView
-        android:id="@+id/imagesScrollView"
+    <TextView
+        android:id="@+id/titleTextView"
         android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:layout_marginTop="8dp">
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:text="Название"
+        android:fontFamily="sans-serif-black"
+        android:textSize="24sp"
+        android:textColor="#000000"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/coordinatesTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Координаты"
+        android:fontFamily="serif"
+        android:textSize="18sp"
+        android:textColor="#808080"
+        android:layout_below="@id/titleTextView"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/speechButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/speaker_icon"
+        android:contentDescription="Озвучить"
+        android:layout_below="@id/coordinatesTextView"/>
+
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/speechButton">
 
         <LinearLayout
-            android:id="@+id/imagesLinearLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView
-                android:id="@+id/titleTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Название"
-                android:textSize="16sp"
-                android:textColor="#000000"/>
 
-            <TextView
-                android:id="@+id/coordinatesTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/titleTextView"
-                android:layout_marginTop="8dp"
-                android:text="Координаты"
-                android:textSize="16sp"
-                android:textColor="#000000"/>
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/imagesViewPager"
+                android:layout_width="500dp"
+                android:layout_height="300dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"/>
 
             <TextView
                 android:id="@+id/descriptionTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/coordinatesTextView"
                 android:layout_marginTop="8dp"
                 android:text="Описание"
-                android:textSize="16sp"
+                android:fontFamily="sans-serif-condensed-medium"
+                android:textSize="18sp"
                 android:textColor="#000000"/>
-            <!-- Здесь будут добавлены ImageView-ы с изображениями -->
+
         </LinearLayout>
 
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </RelativeLayout>

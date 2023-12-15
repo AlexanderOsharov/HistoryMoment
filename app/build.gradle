@@ -38,11 +38,14 @@ android {
 }
 
 dependencies {
+
     // OpenMap
     implementation 'org.osmdroid:osmdroid-android:6.1.10'
 
     // Для маршрутов
     implementation 'com.graphhopper:graphhopper-reader-osm:0.10.0'
+
+    // Для озвучки
 
     // Gson
     implementation 'com.google.code.gson:gson:2.8.8'
