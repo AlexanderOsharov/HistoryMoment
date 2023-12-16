@@ -359,42 +359,45 @@ class MapsActivity : AppCompatActivity() {
     }
 
     private fun buildRoute(numPoints: Int, visibleMarkers: MutableList<Marker>) {
-        //val sortedMarkers = visibleMarkers.sortedBy { it.position.distanceToAsDouble(currentLocation.position) }
-        var temp = visibleMarkers[0]
-        var index = FindPoint(currentLocation, visibleMarkers)
-        visibleMarkers[0] = visibleMarkers[index]
-        visibleMarkers[index] = temp
-        Log.e("BuildRoute666666", "visibleMarkers.size = ${visibleMarkers.size}")
-        for (i in 1 until visibleMarkers.size) {
-            Log.e("BuildRoute666666", "i = $i")
-            temp = visibleMarkers[i]
-            index = FindPoint(visibleMarkers[i - 1], visibleMarkers.subList(i, visibleMarkers.size))
-            Log.e("BuildRoute666666", "index = $index")
-            visibleMarkers[i] = visibleMarkers[index + i]
-            visibleMarkers[index + i] = temp
-            Log.e("BuildRoute666666", "index + i + 1 = ${index + i + 1}")
+        if (numPoints != null) {
+            //val sortedMarkers = visibleMarkers.sortedBy { it.position.distanceToAsDouble(currentLocation.position) }
+            var temp = visibleMarkers[0]
+            var index = FindPoint(currentLocation, visibleMarkers)
+            visibleMarkers[0] = visibleMarkers[index]
+            visibleMarkers[index] = temp
+            Log.e("BuildRoute666666", "visibleMarkers.size = ${visibleMarkers.size}")
+            for (i in 1 until visibleMarkers.size) {
+                Log.e("BuildRoute666666", "i = $i")
+                temp = visibleMarkers[i]
+                index =
+                    FindPoint(visibleMarkers[i - 1], visibleMarkers.subList(i, visibleMarkers.size))
+                Log.e("BuildRoute666666", "index = $index")
+                visibleMarkers[i] = visibleMarkers[index + i]
+                visibleMarkers[index + i] = temp
+                Log.e("BuildRoute666666", "index + i + 1 = ${index + i + 1}")
+            }
+
+            // Строим маршрут
+            val polyline = Polyline()
+            polyline.width = 10f
+            polyline.color = Color.BLUE
+            polyline.addPoint(currentLocation.position) // текущее положение
+            polyline.addPoint(visibleMarkers[0].position) // положение первой видимой точки
+
+            map.overlayManager.add(polyline)
+
+            for (i in 1 until numPoints) {
+                val polyline1 = Polyline()
+                polyline1.width = 10f
+                polyline1.color = Color.BLUE
+                polyline1.addPoint(visibleMarkers[i - 1].position) // положение первой точки
+                polyline1.addPoint(visibleMarkers[i].position) // положение второй очки
+
+                map.overlayManager.add(polyline1)
+            }
+
+            map.invalidate() // обновление карты
         }
-
-        // Строим маршрут
-        val polyline = Polyline()
-        polyline.width = 10f
-        polyline.color = Color.BLUE
-        polyline.addPoint(currentLocation.position) // текущее положение
-        polyline.addPoint(visibleMarkers[0].position) // положение первой видимой точки
-
-        map.overlayManager.add(polyline)
-
-        for (i in 1 until numPoints) {
-            val polyline1 = Polyline()
-            polyline1.width = 10f
-            polyline1.color = Color.BLUE
-            polyline1.addPoint(visibleMarkers[i - 1].position) // положение первой точки
-            polyline1.addPoint(visibleMarkers[i].position) // положение второй очки
-
-            map.overlayManager.add(polyline1)
-        }
-
-        map.invalidate() // обновление карты
     }
 
     @SuppressLint("SuspiciousIndentation")
@@ -462,7 +465,9 @@ class MapsActivity : AppCompatActivity() {
                             val placeholderIcon = R.drawable.historical_places
                             Glide.with(this)
                                 .asDrawable()
-                                .load(listOf(location.photo?.url.toString())[0])
+                                .load(//listOf(location.photo?.url.toString())[0]
+                                    location.photo?.urls?.get(0)
+                                )
                                 .circleCrop() // для того чтобы сделать картинку круглой
                                 .override(100, 100) // желаемый размер
                                 .placeholder(placeholderIcon) // устанавливаем иконку по умолчанию
@@ -478,9 +483,17 @@ class MapsActivity : AppCompatActivity() {
                                             coord[0]
                                         )
                                     ) as MutableList<Coordinates>
-                                    description = newLocation.subDescription
-                                    images =
-                                        listOf(location.photo?.url.toString()) as MutableList<String>
+                                    //description = newLocation.subDescription
+//                                    description = "Историческая справка ---- Существующее здание располагалось на территории владения, зафиксированного на планах 1789 и 1791 годов и входило в состав двора, занимавшего площадь от Москва-реки до Болотной площади. Между 1791 и 1804 годами на месте засыпанного протока появился новый проезд, и территория владения вошла в состав вновь сформированного двора князя М.И.Гагарина. На панораме Замоскворечья 1807 года главный дом зафиксирован на углу владения, выходящим торцом на переулок, а главным фасадом на набережную и представляющим собой небольшое оформленное портиком здание. Парадно обработанный фасад этого дома, смотревший на реку, был решен своеобразно: нижний этаж его как бы выдвинут на линию набережной и имел плоское покрытие. Судя по ясно обозначенному подъезду с козырьком, в выступе размещался вестибюль, крыша которого использовалась как балкон. К 1851 году красная линия по Фалеевскому переулку была отрегулирована согласно плану Челищева, а здание к этому времени капитально перестроено с явным использованием остатков прежде стоявшего здесь объема, возведенного князем Гагариным и зафиксированного на «погорелом плане». Небольшой двухэтажный каменный Г-образный в плане главный дом к середине XIX века был ориентирован своим главным (теперь восточным) фасадом не на Москву-реку, а на трассу переулка, красную линию которого он закреплял. Существовавшая уже в начале века на южной границе участка каменная постройка к середине столетия была надстроена деревянным этажом, а с запада к ней был пристроен двухэтажный каменный объём, объединённый с первоначальным в одно строение. Около 1825 года усадебный дом разобрали, а его угловая часть была включена в небольшой двухэтажный каменный объем Г-образный в плане, выходивший торцом на набережную, вторым фасадом в переулок и со стороны двора имевший двухэтажную галерею. К началу 1850-х годов по линии переулка появилось небольшое деревянное сооружение в один этаж. Между 1851- 1856 годами южнее главного дома по переулку был сооружен двухэтажный кирпичный корпус торговых помещений, примыкавший к существующему объему и позднее использовавшийся в качестве условно жилого. В 1876 году владение принадлежало статскому советнику С.С. Подгорецкому. К этому времени оно уже было плотно застроено. Тогда же по заказу владельца и по проекту архитектора В.Н.Карнеева угловой жилой дом капитально перестраивается с надстройкой его третьим этажом (источниками 1876 он характеризуется как трёхэтажный жилой). Фасады здания приобрели композиционную структуру, сохранившуюся до наших дней. Тогда же были заложены арки главного фасада южной части здания, выходящего на Фалеевский переулок, а со стороны двора к нему были пристроены трехэтажная каменная пристройка и галерея. На плане 1885 года в северном объеме отмечено наличие подвала, а в 1898 году в нем располагались переплетные мастерские Короблева и Попова. Между 1894- 1905 годами весь первый этаж южного объема использовался под лавки. "
+                                    description = location.description.toString()
+                                    images = location.photo?.urls!!
+//                                        listOf(location.photo?.url.toString()) as MutableList<String>
+//                                        listOf(location.photo?.url.toString(), "https://avatars.mds.yandex.net/i?id=aefcdcc2a6c982467e6753bc4305463687168c5d-8497835-images-thumbs&n=13", "https://avatars.mds.yandex.net/i?id=6602ff449fdead67869394d7a0d1c3bcdf1f45c3-10147998-images-thumbs&n=13", "https://avatars.mds.yandex.net/i?id=3ecc5fdb21ed6954664a2f99c21e0a3abfcf7abf-4432102-images-thumbs&n=13", "https://avatars.mds.yandex.net/i?id=006debf28fb210ddbe507eaaafac1648b0313d59-10197150-images-thumbs&n=13") as MutableList<String>
+//                                    images = listOf("https://avatars.mds.yandex.net/i?id=006debf28fb210ddbe507eaaafac1648b0313d59-10197150-images-thumbs&n=13") as MutableList<String>
+//                                    images.add("https://avatars.mds.yandex.net/i?id=3ecc5fdb21ed6954664a2f99c21e0a3abfcf7abf-4432102-images-thumbs&n=13")
+//                                    images.add("https://avatars.mds.yandex.net/i?id=6602ff449fdead67869394d7a0d1c3bcdf1f45c3-10147998-images-thumbs&n=13")
+//                                    images.add("https://avatars.mds.yandex.net/i?id=aefcdcc2a6c982467e6753bc4305463687168c5d-8497835-images-thumbs&n=13")
+
                                     type = location.address?.mapPosition?.type.toString()
                                 }
                                 val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
