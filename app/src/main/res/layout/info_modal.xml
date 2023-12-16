@@ -1,49 +1,21 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="475dp"
     android:layout_alignParentBottom="true"
     android:background="@drawable/dialog_bg"
     android:padding="16dp"
-    android:layout_marginLeft="16dp"
-    android:layout_marginRight="16dp"
+    android:layout_marginLeft="0dp"
+    android:layout_marginRight="0dp"
     android:elevation="8dp"
     android:clipToPadding="false"
     android:clipChildren="false"
     android:id="@+id/parentRelative">
 
-    <TextView
-        android:id="@+id/titleTextView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Название"
-        android:textSize="16sp"
-        android:textColor="#000000"/>
-
-    <TextView
-        android:id="@+id/coordinatesTextView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/titleTextView"
-        android:layout_marginTop="8dp"
-        android:text="Координаты"
-        android:textSize="16sp"
-        android:textColor="#000000"/>
-
-    <TextView
-        android:id="@+id/descriptionTextView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/coordinatesTextView"
-        android:layout_marginTop="8dp"
-        android:text="Описание"
-        android:textSize="16sp"
-        android:textColor="#000000"/>
 
     <ScrollView
         android:id="@+id/imagesScrollView"
         android:layout_width="match_parent"
         android:layout_height="150dp"
-        android:layout_below="@id/descriptionTextView"
         android:layout_marginTop="8dp">
 
         <LinearLayout
@@ -51,6 +23,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+            <TextView
+                android:id="@+id/titleTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Название"
+                android:textSize="16sp"
+                android:textColor="#000000"/>
+
+            <TextView
+                android:id="@+id/coordinatesTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/titleTextView"
+                android:layout_marginTop="8dp"
+                android:text="Координаты"
+                android:textSize="16sp"
+                android:textColor="#000000"/>
+
+            <TextView
+                android:id="@+id/descriptionTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/coordinatesTextView"
+                android:layout_marginTop="8dp"
+                android:text="Описание"
+                android:textSize="16sp"
+                android:textColor="#000000"/>
             <!-- Здесь будут добавлены ImageView-ы с изображениями -->
         </LinearLayout>
 

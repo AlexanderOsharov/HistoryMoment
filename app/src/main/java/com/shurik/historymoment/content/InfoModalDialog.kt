@@ -9,7 +9,9 @@ import android.graphics.Matrix
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.*
@@ -18,6 +20,7 @@ import com.shurik.historymoment.MapsActivity
 import com.shurik.historymoment.R
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
+import java.util.*
 
 class InfoModalDialog(context: Context, private val data: InfoModalData) : Dialog(context, R.style.FullScreenDialogStyle) {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,9 +122,18 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Dialo
         }
     }
 
-    fun bearingBetweenLocations(lat1: Double, long1: Double, lat2: Double, long2: Double): Float {
-        val brng = Math.atan2(Math.sin(long2 - long1) * Math.cos(lat2), Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(long2 - long1))
-        return Math.toDegrees((brng + 2 * Math.PI) % (2 * Math.PI)).toFloat()
+    companion object {
+        fun bearingBetweenLocations(
+            lat1: Double,
+            long1: Double,
+            lat2: Double,
+            long2: Double
+        ): Float {
+            val brng = Math.atan2(
+                Math.sin(long2 - long1) * Math.cos(lat2),
+                Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(long2 - long1)
+            )
+            return Math.toDegrees((brng + 2 * Math.PI) % (2 * Math.PI)).toFloat()
+        }
     }
-
 }

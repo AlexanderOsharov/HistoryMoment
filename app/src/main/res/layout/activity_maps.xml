@@ -9,13 +9,24 @@
         android:layout_height="match_parent" />
 
     <Button
+        android:id="@+id/route_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="построить маршрут" />
+
+    <Button
         android:id="@+id/center_location_button"
-        android:layout_width="80dp"
-        android:layout_height="60dp"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="36dp"
-        android:visibility="visible"
-        android:background="@drawable/target_icon" />
+        android:background="@drawable/ic_menu_compass"
+        android:includeFontPadding="false"
+        android:visibility="visible" />
 </RelativeLayout>
