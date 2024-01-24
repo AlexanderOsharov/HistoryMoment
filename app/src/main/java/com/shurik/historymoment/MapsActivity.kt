@@ -6,14 +6,20 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.drawable.Drawable
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.NumberPicker
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -64,6 +70,15 @@ class MapsActivity : AppCompatActivity() {
         fastestInterval = 5000
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
+
+    // 2024-01-16 (P. S. из-за этого может что-то не работать)
+    private lateinit var tts: TextToSpeech
+    private lateinit var mediaPlayer: MediaPlayer
+    private var currentMarkerIndex: Int = 0
+    private var isTTSInitialized: Boolean = false
+    private var isPlaying: Boolean = false
+    private lateinit var speakInfo: Button
+    var speakInfoWAS_INITIALIZED = false
 
     //TODO(Для проверки работоспособности базы поместил код с viewmodel в MapsActivity, дальше используй по своему усмотрению)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -237,8 +252,52 @@ class MapsActivity : AppCompatActivity() {
             }
         }
 
+        // 2024-01-16 (P. S. из-за этого может что-то не работать)
+        // Инициализация TextToSpeech
+        tts = TextToSpeech(this) { status ->
+            if (status != TextToSpeech.ERROR) {
+                isTTSInitialized = true
+            }
+        }
+
+        // Инициализация MediaPlayer
+        mediaPlayer = MediaPlayer()
+
+        speakInfo = binding.speakInfo
+        setTtsUtteranceListener()
+
         routeButton = binding.routeButton
         setupRouteButton()
+    }
+
+    // Метод для установки UtteranceProgressListener при инициализации TTS
+    var setvisibleMarkers = mutableListOf<Marker>()
+    private fun setTtsUtteranceListener() {
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                // Началась речь.
+                isPlaying = true
+            }
+
+            override fun onDone(utteranceId: String?) {
+                // Речь закончена, воспроизведем следующую точку.
+                if (utteranceId == "Marker_${currentMarkerIndex}") {
+                    currentMarkerIndex = FindPoint(currentLocation, setvisibleMarkers)
+                    if (currentMarkerIndex < setvisibleMarkers.size) {
+                        speakMarkerInformation(setvisibleMarkers)
+                    } else {
+                        // Озвучивание всех точек завершено
+                    }
+                }
+                isPlaying = false
+            }
+
+            override fun onError(utteranceId: String?) {
+                // Произошла ошибка во время воспроизведения.
+                isPlaying = false
+                pausePlayback()
+            }
+        })
     }
 
     override fun onRequestPermissionsResult(
@@ -334,6 +393,7 @@ class MapsActivity : AppCompatActivity() {
                     .setTitle("Выберите количество точек для маршрута")
                     .setView(numberPicker)
                     .setPositiveButton("OK") { _, _ ->
+                        setvisibleMarkers = visibleMarkers
                         val selectedNumPoints = numberPicker.value
                         buildRoute(selectedNumPoints, visibleMarkers)
                     }
@@ -344,7 +404,8 @@ class MapsActivity : AppCompatActivity() {
             }
             else {
                 routeButton.text = "построить маршрут"
-
+                pausePlayback()
+                hideSpeakInfoButton()
                 if (map.zoomLevelDouble > 17.0) {
                     displayMarkersOnScreen()
                 } else {
@@ -394,8 +455,88 @@ class MapsActivity : AppCompatActivity() {
             }
 
             map.invalidate() // обновление карты
+            initSpeakInfoButton(visibleMarkers)
         }
     }
+
+    // 2024-01-16 (P. S. из-за этого может что-то не работать)
+    private fun speakMarkerInformation(marker: Marker) {
+        if (isTTSInitialized) {
+            val textToSpeak = marker.subDescription // Получаем информацию о точке
+            tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
+        }
+    }
+
+    private fun speakMarkerInformation(visibleMarkers: MutableList<Marker>) {
+        if (isTTSInitialized && currentMarkerIndex < visibleMarkers.size) {
+            val textToSpeak = visibleMarkers[currentMarkerIndex].subDescription
+            tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "Marker_${currentMarkerIndex}")
+        }
+    }
+
+    private fun initSpeakInfoButton(visibleMarkers: MutableList<Marker>) {
+        showSpeakInfoButton()
+        currentMarkerIndex = FindPoint(currentLocation, visibleMarkers)
+        speakInfo.setOnClickListener {
+            if (!isPlaying) {
+                if (currentMarkerIndex < visibleMarkers.size) {
+                    resumePlayback(visibleMarkers)
+                }
+            } else {
+                pausePlayback()
+            }
+        }
+    }
+
+    private fun speakNextMarkerInformation(visibleMarkers: MutableList<Marker>) {
+        val nextMarkerIndex = FindPoint(currentLocation, visibleMarkers)
+        if (nextMarkerIndex < visibleMarkers.size) {
+            currentMarkerIndex = nextMarkerIndex
+            speakMarkerInformation(visibleMarkers)
+        }
+    }
+
+    private fun pausePlayback() {
+        if (isTTSInitialized && tts.isSpeaking) {
+            tts.stop()
+        }
+        if (mediaPlayer.isPlaying) {
+            mediaPlayer.pause()
+        }
+        isPlaying = false
+    }
+
+    private fun resumePlayback(visibleMarkers: MutableList<Marker>) {
+        currentMarkerIndex = FindPoint(currentLocation, visibleMarkers)
+        if (isTTSInitialized && !tts.isSpeaking) {
+            speakMarkerInformation(visibleMarkers[currentMarkerIndex])
+        }
+        if (mediaPlayer.isPlaying) {
+            mediaPlayer.start()
+        }
+        isPlaying = true
+    }
+
+    private fun showSpeakInfoButton() {
+        val fadeIn = AnimationUtils.loadAnimation(this, R.anim.speak_info_fade_in)
+        speakInfo.startAnimation(fadeIn)
+        speakInfo.visibility = View.VISIBLE
+    }
+
+    private fun hideSpeakInfoButton() {
+        val fadeOut = AnimationUtils.loadAnimation(this, R.anim.speak_info_fade_out)
+        speakInfo.startAnimation(fadeOut)
+        fadeOut.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation) {}
+
+            override fun onAnimationRepeat(animation: Animation) {}
+
+            override fun onAnimationEnd(animation: Animation) {
+                speakInfo.visibility = View.GONE
+            }
+        })
+    }
+
 
     @SuppressLint("SuspiciousIndentation")
     private fun FindPoint(marker: Marker, listMarkers: MutableList<Marker>): Int {
@@ -514,7 +655,6 @@ class MapsActivity : AppCompatActivity() {
         return markerPoint.x in 0..screenWidth && markerPoint.y in 0..screenHeight
     }
 
-    private lateinit var tts: TextToSpeech
     fun speakDescription(view: View) {
         val descriptionTextView: TextView = findViewById(R.id.descriptionTextView)
         val textToSpeak: String = descriptionTextView.text.toString()
