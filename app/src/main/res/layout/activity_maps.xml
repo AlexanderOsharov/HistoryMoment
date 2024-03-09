@@ -1,7 +1,8 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:id="@+id/parentRelative">
 
     <org.osmdroid.views.MapView
         android:id="@+id/map"
@@ -30,4 +31,17 @@
         android:background="@drawable/ic_menu_compass"
         android:includeFontPadding="false"
         android:visibility="visible" />
+
+    <Button
+        android:id="@+id/speak_info"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/speaker_icon"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="426dp"
+        android:visibility="gone"/>
+
+
 </RelativeLayout>
