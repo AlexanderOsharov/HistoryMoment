@@ -8,11 +8,13 @@ import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.animation.Animation
@@ -49,7 +51,7 @@ import java.util.*
 import kotlin.math.pow
 
 class MapsActivity : AppCompatActivity() {
-    private val dbManager = DatabaseManager();
+    private val dbManager = DatabaseManager()
     companion object {
         lateinit var map: MapView
         lateinit var mapController: IMapController
@@ -123,7 +125,7 @@ class MapsActivity : AppCompatActivity() {
                 }*/
             }
         }
-        dbManager.getData()
+//        dbManager.getData()
         // ==========================================================================
     }
 
@@ -229,7 +231,8 @@ class MapsActivity : AppCompatActivity() {
         fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
             if (location != null) {
                 val startPoint = GeoPoint(location.latitude, location.longitude)
-                mapController.setCenter(startPoint)
+//                mapController.setCenter(startPoint)GeoPoint(55.752029, 37.618361)
+                mapController.setCenter(GeoPoint(55.752029, 37.618361))
                 currentLocation.position = startPoint
                 map.overlays.add(currentLocation)
 
@@ -384,35 +387,83 @@ class MapsActivity : AppCompatActivity() {
                 routeButton.text = "Вернуться"
 
                 val visibleMarkers = ListPointsRoute()
-                val numberPicker = NumberPicker(this)
-                numberPicker.minValue = 1
-                numberPicker.maxValue =
-                    visibleMarkers.size // кол-во элементов в листе visibleMarkers
+                if (visibleMarkers.size > 0) {
+                    val numberPicker = NumberPicker(this)
+                    numberPicker.minValue = 1
+                    numberPicker.maxValue =
+                        visibleMarkers.size // кол-во элементов в листе visibleMarkers
 
-                val dialog = AlertDialog.Builder(this)
-                    .setTitle("Выберите количество точек для маршрута")
-                    .setView(numberPicker)
-                    .setPositiveButton("OK") { _, _ ->
-                        setvisibleMarkers = visibleMarkers
-                        val selectedNumPoints = numberPicker.value
-                        buildRoute(selectedNumPoints, visibleMarkers)
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .create()
 
-                dialog.show()
-            }
-            else {
-                routeButton.text = "построить маршрут"
-                pausePlayback()
-                hideSpeakInfoButton()
-                if (map.zoomLevelDouble > 17.0) {
-                    displayMarkersOnScreen()
-                } else {
-                    map.overlays.clear()
-                    map.overlays.add(currentLocation)
+                    val dialog =
+                        AlertDialog.Builder(this)//ContextThemeWrapper(this, R.style.AlertDialogThemeDark))
+                            .setTitle("Выберите количество точек для маршрута")
+                            .setView(numberPicker)
+                            .setPositiveButton("OK") { _, _ ->
+                                setvisibleMarkers = visibleMarkers
+                                val selectedNumPoints = numberPicker.value
+
+                                if (selectedNumPoints == 0 || visibleMarkers.size == 0) {
+                                    isRouteButtonClicked = !isRouteButtonClicked
+                                    routeButton.text = "построить маршрут"
+                                    val dialogError = AlertDialog.Builder(this)
+                                        .setMessage("Уважаемый пользователь, в этой области нет приемлемых объектов для построения маршрута. HistoryMoment настоятельно советует выбрать другую область.")
+                                        .setCancelable(false) // Чтобы запретить закрыть диалог, нажав вне его или кнопку "назад"
+                                        .setPositiveButton("Понял") { dialogError, _ ->
+                                            // Здесь вы можете добавить код реакции на нажатие кнопки "Понял"
+                                            dialogError.dismiss()
+                                        }
+                                        .show()
+
+                                    // Закрываем диалог через 5 секунд
+                                    val handlerError = Handler(Looper.getMainLooper())
+                                    handlerError.postDelayed({
+                                        if (dialogError.isShowing) {
+                                            dialogError.dismiss()
+                                        }
+                                    }, 5000) // время в миллисекундах
+                                } else buildRoute(selectedNumPoints, visibleMarkers)
+                            }
+                            .setNegativeButton("Отмена") { _, _ ->
+                                isRouteButtonClicked = !isRouteButtonClicked
+                                routeButton.text = "построить маршрут"
+                            }
+                            .create()
+
+                    dialog.show()
                 }
-            }
+                else {
+                    isRouteButtonClicked = !isRouteButtonClicked
+                    routeButton.text = "построить маршрут"
+                    val dialogError = AlertDialog.Builder(this)
+                        .setMessage("Уважаемый пользователь, в этой области нет приемлемых объектов для построения маршрута. HistoryMoment настоятельно советует выбрать другую область.")
+                        .setCancelable(false) // Чтобы запретить закрыть диалог, нажав вне его или кнопку "назад"
+                        .setPositiveButton("Понял") { dialogError, _ ->
+                            // Здесь вы можете добавить код реакции на нажатие кнопки "Понял"
+                            dialogError.dismiss()
+                        }
+                        .show()
+
+                    // Закрываем диалог через 5 секунд
+                    val handlerError = Handler(Looper.getMainLooper())
+                    handlerError.postDelayed({
+                        if (dialogError.isShowing) {
+                            dialogError.dismiss()
+                        }
+                    }, 5000) // время в миллисекундах
+                    
+                }
+            }else {
+                    routeButton.text = "построить маршрут"
+                    pausePlayback()
+                    hideSpeakInfoButton()
+                    if (map.zoomLevelDouble > 17.0) {
+                        displayMarkersOnScreen()
+                    } else {
+                        map.overlays.clear()
+                        map.overlays.add(currentLocation)
+                    }
+                }
+
         }
     }
 
