@@ -17,10 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.Button
-import android.widget.NumberPicker
-import android.widget.RelativeLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -61,15 +58,15 @@ class MapsActivity : AppCompatActivity() {
     private lateinit var currentLocation: Marker
     private lateinit var routeButton: Button
     private var isRouteButtonClicked: Boolean = false
-    private lateinit var centerLocationButton: Button
+    private lateinit var centerLocationButton: ImageButton
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private val REQUEST_LOCATION_PERMISSIONS = 1
 
     // Для определения частоты обновления местоположения
     private val locationRequest: LocationRequest = LocationRequest.create().apply {
-        interval = 10000
-        fastestInterval = 5000
+        interval = 10
+        fastestInterval = 5
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
@@ -79,10 +76,9 @@ class MapsActivity : AppCompatActivity() {
     private var currentMarkerIndex: Int = 0
     private var isTTSInitialized: Boolean = false
     private var isPlaying: Boolean = false
-    private lateinit var speakInfo: Button
+    private lateinit var speakInfo: ImageButton
     var speakInfoWAS_INITIALIZED = false
 
-    //TODO(Для проверки работоспособности базы поместил код с viewmodel в MapsActivity, дальше используй по своему усмотрению)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
@@ -177,7 +173,7 @@ class MapsActivity : AppCompatActivity() {
 
     private fun initLocationUpdates() {
         val locationRequest = LocationRequest.create()?.apply {
-            interval = 5000 // Обновляем каждую секунду
+            interval = 10 // Обновляем каждую секунду
             fastestInterval = 10
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
@@ -384,6 +380,7 @@ class MapsActivity : AppCompatActivity() {
         routeButton.setOnClickListener {
             isRouteButtonClicked = !isRouteButtonClicked
             if (isRouteButtonClicked) {
+
                 routeButton.text = "Вернуться"
 
                 val visibleMarkers = ListPointsRoute()
@@ -402,11 +399,11 @@ class MapsActivity : AppCompatActivity() {
                     }
                     .setNegativeButton("Cancel", null)
                     .create()
-
                 dialog.show()
             }
             else {
-                routeButton.text = "построить маршрут"
+                routeButton.text = "Построить маршрут"
+
                 pausePlayback()
                 hideSpeakInfoButton()
                 if (map.zoomLevelDouble > 17.0) {
