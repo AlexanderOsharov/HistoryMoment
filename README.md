@@ -11,6 +11,5 @@
 2. [Результаты опроса (актуально на 2024-03-15)](https://alexanderosharov.github.io/HM-VotingResults/)
 3. [Тезисы](https://github.com/AlexanderOsharov/HM-Abstracts)
 4. [GitHub приложения](https://github.com/AlexanderOsharov/HistoryMoment)
-5. [Github сервера](https://github.com/AlexanderOsharov/HM-server)
-6. [Демонстрация работы](https://1drv.ms/v/s!AjlyOsqZFbYNudxbsmbbmBXAUI_U0Q?e=PBz7be)
+5. [Демонстрация работы](https://1drv.ms/v/s!AjlyOsqZFbYNudxbsmbbmBXAUI_U0Q?e=PBz7be)
 
