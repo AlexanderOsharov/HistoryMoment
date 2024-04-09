@@ -1,68 +1,70 @@
 package com.shurik.historymoment
 
 
+
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.VideoView
+import android.widget.ImageView
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import android.content.Intent
-import android.net.Uri
+import com.bumptech.glide.Glide
 import com.shurik.historymoment.R
 import com.shurik.historymoment.db.DatabaseManager
 
 class SplashActivity : AppCompatActivity() {
-    private lateinit var videoView: VideoView
+    private lateinit var splashImageView: ImageView
     private val dbManager = DatabaseManager()
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        videoView = findViewById(R.id.splash_video_view)
-        val videoUri = Uri.parse("android.resource://${packageName}/${R.raw.splash_video}")
-        videoView.setVideoURI(videoUri)
-        videoView.start()
+        splashImageView = findViewById(R.id.splash_image_view)
+        val gifResourceID = R.raw.splash_gif // Замените на ваш ресурс GIF
 
-        // Запустите оба процесса асинхронно
-        // Примите решение после завершения обоих
+        // Загрузка и отображение GIF с помощью библиотеки Glide
+        Glide.with(this)
+//            .asGif()
+            .load(R.drawable.splash_image_view)
+            .into(splashImageView)
+
+        // Запуск процессов асинхронно и переход к MapsActivity после их завершения
         initTasks()
     }
 
     private fun initTasks() {
         val dataLoaded = CompletableDeferred<Boolean>()
-        val videoWatched = CompletableDeferred<Boolean>()
+        val delayedTransition = CompletableDeferred<Boolean>()
 
-        // Инициализируем загрузку данных в фоне
+        // Инициализация загрузки данных в фоне
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                dbManager.getData() // Загружаем данные
-                dataLoaded.complete(true) // Отмечаем, что загрузка данных завершена
+                dbManager.getData() // Загрузка данных
+                dataLoaded.complete(true) // Отметка о завершении загрузки данных
             } catch (e: Exception) {
                 dataLoaded.complete(false) // В случае ошибки
             }
         }
 
-        // Отслеживаем завершение видео
-        videoView.setOnCompletionListener {
-            videoWatched.complete(true) // Отмечаем, что просмотр завершён
+        // Задержка перед переходом к MapsActivity
+        lifecycleScope.launch {
+            delay(8000) // Задержка на 8 секунд для проигрывания GIF
+            delayedTransition.complete(true) // Отметка о завершении задержки
         }
 
-        // Переходим к MapsActivity после завершения обоих заданий
+        // Переход к MapsActivity после завершения обоих задач
         lifecycleScope.launch {
             joinAll(
                 async { dataLoaded.await() },
-                async { videoWatched.await() }
+                async { delayedTransition.await() }
             )
             // После завершения всех задач запускаем MapsActivity
             val intent = Intent(this@SplashActivity, MapsActivity::class.java)
             startActivity(intent)
             finish()
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        videoView.stopPlayback() // Останавливаем воспроизведение и освобождаем ресурсы
     }
 }

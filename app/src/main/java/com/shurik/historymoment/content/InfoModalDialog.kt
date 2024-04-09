@@ -41,6 +41,7 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+        window?.setElevation(16f)
         setCanceledOnTouchOutside(true)
 
         setupData()
@@ -58,7 +59,7 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
         val descriptionTextView: TextView? = findViewById(R.id.descriptionTextView)
         imagesViewPager = findViewById(R.id.imagesViewPager)!!
         val speechButton: Button? = findViewById(R.id.speechButton)
-        val parentRelative: RelativeLayout? = findViewById(R.id.parentRelative)
+        val parentRelative: FrameLayout? = findViewById(R.id.parentRelative)
 
         titleTextView?.text = data.title
         coordinatesTextView?.text = "Coordinates: ${data.coordinates[0].latitude}, ${data.coordinates[0].longitude}"
@@ -99,20 +100,42 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
                 isSpeechPlaying = false
             } else {
                 if (pausedPosition > 0) {
-                    val textToSay = data.description.substring(pausedPosition) // получение подстроки для продолжения озвучивания
-                    textToSpeechSystem.speak(textToSay, TextToSpeech.QUEUE_ADD, null, null) // воспроизведение с сохраненной позиции
+                    //val textToSay = data.description.substring(pausedPosition) // получение подстроки для продолжения озвучивания
+                    val resultArray = splitString(data.description.substring(pausedPosition), 1000)
+                    for (textToSay in resultArray) {
+                        textToSpeechSystem.speak(
+                            textToSay,
+                            TextToSpeech.QUEUE_ADD,
+                            null,
+                            null
+                        ) // воспроизведение с сохраненной позиции
+                    }
                 }
                 else {
                     textToSpeechSystem = TextToSpeech(context) { status ->
                         if (status == TextToSpeech.SUCCESS) {
-                            val textToSay = data.description
-                            textToSpeechSystem.speak(textToSay, TextToSpeech.QUEUE_ADD, null, null)
+//                            val textToSay = data.description
+//                            textToSpeechSystem.speak(textToSay, TextToSpeech.QUEUE_ADD, null, null)
+                            val resultArray = splitString(data.description.substring(pausedPosition), 1000)
+                            for (textToSay in resultArray) {
+                                textToSpeechSystem.speak(
+                                    textToSay,
+                                    TextToSpeech.QUEUE_ADD,
+                                    null,
+                                    null
+                                ) // воспроизведение с сохраненной позиции
+                            }
                         }
                     }
                 }
                 isSpeechPlaying = true
             }
         }
+    }
+
+    fun splitString(input: String, maxLength: Int): List<String> {
+        val regex = ".{1,$maxLength}".toRegex()
+        return regex.findAll(input).map { it.value }.toList()
     }
 
     class ImagePagerAdapter(private val images: List<String>, private val viewPager2: ViewPager2) : RecyclerView.Adapter<ImagePagerAdapter.ImageViewHolder>() {

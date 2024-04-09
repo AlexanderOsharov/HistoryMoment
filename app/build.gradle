@@ -45,7 +45,8 @@ dependencies {
     // Для маршрутов
     implementation 'com.graphhopper:graphhopper-reader-osm:0.10.0'
 
-    // Для озвучки
+    // Для дизайна
+    implementation 'com.google.android.material:material:1.4.0'
 
     // Gson
     implementation 'com.google.code.gson:gson:2.8.8'

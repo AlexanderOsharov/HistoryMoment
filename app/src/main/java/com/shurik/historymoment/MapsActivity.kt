@@ -27,6 +27,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.gms.location.*
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
 import com.shurik.historymoment.databinding.ActivityMapsBinding
@@ -398,6 +399,7 @@ class MapsActivity : AppCompatActivity() {
                     val dialog =
                         AlertDialog.Builder(this)//ContextThemeWrapper(this, R.style.AlertDialogThemeDark))
                             .setTitle("Выберите количество точек для маршрута")
+
                             .setView(numberPicker)
                             .setPositiveButton("OK") { _, _ ->
                                 setvisibleMarkers = visibleMarkers
@@ -512,10 +514,19 @@ class MapsActivity : AppCompatActivity() {
     }
 
     // 2024-01-16 (P. S. из-за этого может что-то не работать)
+    fun splitString(input: String, maxLength: Int): List<String> {
+        val regex = ".{1,$maxLength}".toRegex()
+        return regex.findAll(input).map { it.value }.toList()
+    }
+
     private fun speakMarkerInformation(marker: Marker) {
         if (isTTSInitialized) {
             val textToSpeak = marker.subDescription // Получаем информацию о точке
             tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
+//            val resultArray = splitString(marker.subDescription, 1000)
+//            for (textToSpeak in resultArray) {
+//                tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
+//            }
         }
     }
 
@@ -523,6 +534,10 @@ class MapsActivity : AppCompatActivity() {
         if (isTTSInitialized && currentMarkerIndex < visibleMarkers.size) {
             val textToSpeak = visibleMarkers[currentMarkerIndex].subDescription
             tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "Marker_${currentMarkerIndex}")
+//            val resultArray = splitString(visibleMarkers[currentMarkerIndex].subDescription, 1000)
+//            for (textToSpeak in resultArray) {
+//                tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "Marker_${currentMarkerIndex}")
+//            }
         }
     }
 
@@ -687,6 +702,7 @@ class MapsActivity : AppCompatActivity() {
                                     type = location.address?.mapPosition?.type.toString()
                                 }
                                 val dialog = InfoModalDialog(this@MapsActivity, infoModalData)
+
                                 dialog.show()
                                 true
                             }
