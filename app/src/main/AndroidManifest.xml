@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -49,6 +50,10 @@
             android:name=".MapsActivity"
             android:exported="false">
         </activity>
+
+        <service
+            android:name=".content.AudioPlayerService"
+            android:exported="false" />
     </application>
 
 </manifest>

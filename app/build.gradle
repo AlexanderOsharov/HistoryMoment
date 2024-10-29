@@ -63,6 +63,10 @@ dependencies {
     // Для парсинга
     implementation 'org.jsoup:jsoup:1.13.1'
 
+    // Для озвучки
+    implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+    implementation 'androidx.media3:media3-session:1.0.0'
+
     // Firebase
     implementation 'androidx.room:room-runtime:2.3.0'
 

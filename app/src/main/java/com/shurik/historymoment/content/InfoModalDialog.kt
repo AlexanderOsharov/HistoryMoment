@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.DialogInterface
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -20,6 +21,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.shurik.historymoment.R
+import com.shurik.historymoment.com.shurik.historymoment.content.TextToSpeechManager
 import java.lang.Math.abs
 
 class InfoModalDialog(context: Context, private val data: InfoModalData) : BottomSheetDialog(context, R.style.AppBottomSheetDialogTheme) {
@@ -30,6 +32,12 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
     private lateinit var adapter: ImagePagerAdapter
 
     private lateinit var textToSpeechSystem: TextToSpeech
+    var isSpeechPlaying = false
+    var pausedPosition = 0 // переменная для сохранения позиции остановки озвучки
+    private var isTTSPlaying = false
+
+    private lateinit var notificationManager: NotificationManager
+    private val notificationId = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,13 +52,20 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
         window?.setElevation(16f)
         setCanceledOnTouchOutside(true)
 
+        notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java) as NotificationManager
+
+        // Слушатель закрытия диалога
+        setOnDismissListener {
+            if (isSpeechPlaying) {
+                pausedPosition = textToSpeechSystem.stop()
+                TextToSpeechManager.stop() // Остановка TTS
+                isSpeechPlaying = false // Обновляем состояние
+                notificationManager.cancel(notificationId) // Отключение уведомления
+            }
+        }
+
         setupData()
-
     }
-
-    var isSpeechPlaying = false
-    var pausedPosition = 0 // переменная для сохранения позиции остановки озвучки
-
 
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
     private fun setupData() {
@@ -71,34 +86,34 @@ class InfoModalDialog(context: Context, private val data: InfoModalData) : Botto
 
 
         // Создание уведомления
-        val notificationManager =
-            ContextCompat.getSystemService(context, NotificationManager::class.java) as NotificationManager
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Channel Name"
-            val descriptionText = "Channel Description"
+            val name = "History Moment Playback"
+            val descriptionText = "Канал уведомлений для озвучивания текста"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel("channelId", name, importance).apply {
+            val channel = NotificationChannel("history_moment_info_dialog_channel_id", name, importance).apply {
                 description = descriptionText
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val notification = NotificationCompat.Builder(context, "channelId")
+        val notification = NotificationCompat.Builder(context, "history_moment_info_dialog_channel_id")
             .setContentTitle("Озвучка активна")
             .setContentText("Текст озвучивается")
-            .setSmallIcon(R.drawable.speaker_icon)
+            .setSmallIcon(R.drawable.hm_icon)
             .build()
-
-        // Запуск уведомления
-        notificationManager.notify(1, notification)
 
 
         speechButton?.setOnClickListener {
+            val speechButton: Button? = findViewById(R.id.speechButton)
             if (isSpeechPlaying) {
                 pausedPosition = textToSpeechSystem.stop() // остановка озвучки, если она уже играет
+                notificationManager.cancel(notificationId) // Отключение уведомления
+                speechButton?.setBackgroundResource(R.drawable.play_icon)
                 isSpeechPlaying = false
             } else {
+                // Запуск уведомления
+                notificationManager.notify(notificationId, notification)
+                speechButton?.setBackgroundResource(R.drawable.speaker_stop_icon)
                 if (pausedPosition > 0) {
                     //val textToSay = data.description.substring(pausedPosition) // получение подстроки для продолжения озвучивания
                     val resultArray = splitString(data.description.substring(pausedPosition), 1000)

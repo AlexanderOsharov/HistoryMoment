@@ -2,11 +2,15 @@ package com.shurik.historymoment
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -23,11 +27,14 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.gms.location.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.shurik.historymoment.content.AudioPlayerService
 import com.shurik.historymoment.content.InfoModalData
 import com.shurik.historymoment.content.InfoModalDialog
 import com.shurik.historymoment.databinding.ActivityMapsBinding
@@ -81,6 +88,9 @@ class MapsActivity : AppCompatActivity() {
     private var isPlaying: Boolean = false
     private lateinit var speakInfo: ImageButton
     var speakInfoWAS_INITIALIZED = false
+
+    private lateinit var notificationManager: NotificationManager
+    private val notificationId = 2
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -217,6 +227,10 @@ class MapsActivity : AppCompatActivity() {
 
 
     private fun getLastKnownLocation() {
+        if (!::fusedLocationClient.isInitialized) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        }
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -236,12 +250,36 @@ class MapsActivity : AppCompatActivity() {
                 currentLocation.position = startPoint
                 map.overlays.add(currentLocation)
 
-                    // Отобразить места после успешного определения местоположения
-                    displayLocations()
+                // Отобразить места после успешного определения местоположения
+                displayLocations()
 
-                    map.invalidate()
-                }
+                map.invalidate()
             }
+        }
+    }
+
+    private fun installMapCenter() {
+        if (!::fusedLocationClient.isInitialized) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        }
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+            if (location != null) {
+                mapController.setCenter(GeoPoint(location.latitude, location.longitude))
+                map.invalidate()
+            }
+        }
     }
 
     private fun additionalSettings() {
@@ -251,7 +289,12 @@ class MapsActivity : AppCompatActivity() {
                 mapController.setZoom(20)
             }
             else {
-                getLastKnownLocation()
+                if (isRouteButtonClicked){
+                    installMapCenter()
+                }
+                else {
+                    getLastKnownLocation()
+                }
             }
         }
 
@@ -261,6 +304,19 @@ class MapsActivity : AppCompatActivity() {
             if (status != TextToSpeech.ERROR) {
                 isTTSInitialized = true
             }
+        }
+
+        // Создание уведомления
+        notificationManager = ContextCompat.getSystemService(this, NotificationManager::class.java) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "History Moment Playback"
+            val descriptionText = "Канал уведомлений для озвучивания текста"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel("history_moment_info_channel_id", name, importance).apply {
+                description = descriptionText
+            }
+            notificationManager.createNotificationChannel(channel)
         }
 
         // Инициализация MediaPlayer
@@ -292,7 +348,11 @@ class MapsActivity : AppCompatActivity() {
                         // Озвучивание всех точек завершено
                     }
                 }
-                isPlaying = false
+
+//                val serviceIntent = Intent(this@MapsActivity, AudioPlayerService::class.java)
+//                serviceIntent.action = "STOP" // Остановить службу
+//                startService(serviceIntent)
+//                isPlaying = false
             }
 
             override fun onError(utteranceId: String?) {
@@ -303,6 +363,13 @@ class MapsActivity : AppCompatActivity() {
         })
     }
 
+    private fun checkLocationPermission() {
+        while (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSIONS)
+        }
+        getLastKnownLocation()
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -311,11 +378,17 @@ class MapsActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_LOCATION_PERMISSIONS) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Разрешение предоставлено, можно получить последнюю известную локацию
                 getLastKnownLocation()
+            } else {
+                showPermissionDeniedNotification() // Разрешение отклонено, показываем уведомление
+                checkLocationPermission() // Запрашиваем разрешение снова
             }
         }
     }
-
+    private fun showPermissionDeniedNotification() {
+        Toast.makeText(this, "Это разрешение необходимо для работы приложения. Пожалуйста, предоставьте его.", Toast.LENGTH_LONG).show()
+    }
     override fun onResume() {
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -386,6 +459,9 @@ class MapsActivity : AppCompatActivity() {
             if (isRouteButtonClicked) {
 
                 routeButton.text = "Вернуться"
+
+                // Отключение уведомления
+                notificationManager.cancel(notificationId)
 
                 val visibleMarkers = ListPointsRoute()
                 if (visibleMarkers.size > 0) {
@@ -522,7 +598,18 @@ class MapsActivity : AppCompatActivity() {
     private fun speakMarkerInformation(marker: Marker) {
         if (isTTSInitialized) {
             val textToSpeak = marker.subDescription // Получаем информацию о точке
+            // Запуск уведомления
+            notificationManager.notify(notificationId, NotificationCompat.Builder(this, "history_moment_info_channel_id")
+                .setContentTitle("Озвучка активна")
+                .setContentText("Текст озвучивается")
+                .setSmallIcon(R.drawable.hm_icon)
+                .build())
             tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
+
+//            val serviceIntent = Intent(this, AudioPlayerService::class.java)
+//            serviceIntent.action = "SPEAK"
+//            serviceIntent.putExtra("TEXT_TO_SPEAK", textToSpeak) // Передаем текст
+//            startService(serviceIntent)
 //            val resultArray = splitString(marker.subDescription, 1000)
 //            for (textToSpeak in resultArray) {
 //                tts.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
@@ -546,10 +633,12 @@ class MapsActivity : AppCompatActivity() {
         currentMarkerIndex = FindPoint(currentLocation, visibleMarkers)
         speakInfo.setOnClickListener {
             if (!isPlaying) {
+                speakInfo.setBackgroundResource(R.drawable.pause_icon)
                 if (currentMarkerIndex < visibleMarkers.size) {
                     resumePlayback(visibleMarkers)
                 }
             } else {
+                speakInfo.setBackgroundResource(R.drawable.play_icon)
                 pausePlayback()
             }
         }
@@ -570,6 +659,11 @@ class MapsActivity : AppCompatActivity() {
         if (mediaPlayer.isPlaying) {
             mediaPlayer.pause()
         }
+        // Отключение уведомления
+        notificationManager.cancel(notificationId)
+//        val serviceIntent = Intent(this, AudioPlayerService::class.java)
+//        serviceIntent.action = "STOP" // Указываем действие "STOP"
+//        startService(serviceIntent) // Запускаем сервис для обработки остановки
         isPlaying = false
     }
 
